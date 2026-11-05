@@ -15,7 +15,7 @@
 <section id="submit" class="hidden"><div class="panel"><h2>Submit a game result</h2><p class="muted">The other player must approve the result before ratings change.</p><form id="submission-form"><div class="grid"><div><label>Opponent</label><select id="opponent" required></select></div><div><label>Which color did you play?</label><select id="color"><option value="white">White</option><option value="black">Black</option></select></div><div><label>Result</label><select id="my-result"><option value="win">I won</option><option value="draw">Draw</option><option value="loss">I lost</option></select></div><div><label>Date and time</label><input id="played-at" type="datetime-local" required></div></div><label>Optional note</label><textarea id="comments" maxlength="1000" placeholder="Anything the other player or admin should know"></textarea><div class="actions"><button id="submit-result">Submit for approval</button></div></form><div id="submit-message" class="muted"></div></div></section>
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Approved game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
-<section id="admin" class="hidden"><div class="panel"><h2>Add a player</h2><form id="add-player"><label>Player's full name</label><input id="new-player-name" maxlength="80" required placeholder="First and last name"><div class="actions"><button>Add player (1400)</button></div></form><div id="admin-message" class="muted"></div></div><div class="panel"><h2>Club roster</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="admin" class="hidden"><div class="panel"><h2>Add a player</h2><form id="add-player"><label>Player's full name</label><input id="new-player-name" maxlength="80" required placeholder="First and last name"><div class="actions"><button>Add player (1400)</button></div></form><div id="admin-message" class="muted"></div></div><div class="panel"><h2>Invite a player</h2><p>First add the person to the club roster above. Then create their account in the <a href="https://supabase.com/dashboard/project/alnbhfowsyaxlovuplbk/auth/users" target="_blank" rel="noopener">Supabase user dashboard</a> using <strong>Add user → Send invitation</strong>. Use the email address they will sign in with. Once they accept, their account will appear below and you can link it to their roster entry.</p><p class="muted">The app intentionally does not store a Supabase secret key or send invitations itself.</p></div><div class="panel"><h2>Unlinked accounts</h2><div id="unlinked-accounts" class="muted">Loading…</div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -66,11 +66,28 @@ async function loadHistory(){
  $('game-history').innerHTML=data?.length?data.map(g=>'<div class="item"><strong>'+gameLabel(g)+'</strong><div class="muted">'+new Date(g.played_at).toLocaleString()+'</div></div>').join(''):'No approved games yet.';
 }
 async function loadAdmin(){
- const {data,error}=await supabase.from('players').select('*').order('display_name');
- $('roster').innerHTML=error?esc(error.message):(data||[]).map(p=>'<div class="item item-top"><span>'+esc(p.display_name)+' · '+p.current_rating+(p.is_active?'':' · inactive')+'</span>'+(p.is_active?'<button class="danger" data-deactivate="'+p.id+'">Deactivate</button>':'')+'</div>').join('')||'No players yet.';
+ const [rosterRes,profilesRes,pendRes]=await Promise.all([
+  supabase.from('players').select('*').order('display_name'),
+  supabase.from('profiles').select('id,display_name,email,player_id,role').order('display_name'),
+  supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false})
+ ]);
+ const data=rosterRes.data||[],accounts=profilesRes.data||[];
+ $('roster').innerHTML=rosterRes.error?esc(rosterRes.error.message):data.map(p=>{
+  const linked=accounts.find(a=>a.player_id===p.id);
+  return '<div class="item item-top"><span><strong>'+esc(p.display_name)+'</strong> · '+p.current_rating+(p.is_active?'':' · inactive')+'<div class="muted">'+(linked?'Account: '+esc(linked.email||linked.display_name)+' · '+esc(linked.role):'No sign-in account linked')+'</div></span>'+(p.is_active?'<button class="danger" data-deactivate="'+p.id+'">Deactivate</button>':'')+'</div>';
+ }).join('')||'No players yet.';
+ const unlinked=accounts.filter(a=>!a.player_id);
+ const availablePlayers=data.filter(p=>p.is_active&&!accounts.some(a=>a.player_id===p.id));
+ $('unlinked-accounts').innerHTML=profilesRes.error?esc(profilesRes.error.message):unlinked.length?unlinked.map(a=>'<div class="item"><strong>'+esc(a.email||a.display_name)+'</strong><div class="muted">'+esc(a.display_name)+' · '+esc(a.role)+'</div><label>Link to roster player</label><div class="grid"><select data-link-player="'+a.id+'"><option value="">Choose a player…</option>'+availablePlayers.map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+'</option>').join('')+'</select><button data-link-account="'+a.id+'">Link account</button></div></div>').join(''):'No unlinked accounts. New invited accounts will appear here after they accept the invitation.';
+ document.querySelectorAll('[data-link-account]').forEach(b=>b.addEventListener('click',async()=>{
+  const accountId=b.dataset.linkAccount,select=document.querySelector('[data-link-player="'+accountId+'"]'),player=players.concat(data).find(p=>p.id===select?.value)||data.find(p=>p.id===select?.value);
+  if(!select?.value){alert('Choose a roster player first.');return}
+  if(!confirm('Link this sign-in account to '+player.display_name+'?'))return;
+  const {error}=await supabase.from('profiles').update({player_id:player.id,display_name:player.display_name}).eq('id',accountId);
+  if(error)alert(error.message);else await loadAdmin();
+ }));
  document.querySelectorAll('[data-deactivate]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Deactivate this player? Their historical games and ratings remain.'))return;const {error}=await supabase.from('players').update({is_active:false}).eq('id',b.dataset.deactivate);if(error)alert(error.message);else{await load();}}));
- const {data:pend}=await supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false});
- $('admin-pending').innerHTML=pend?.length?pend.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
+ $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
 }
 $('login').addEventListener('submit',async e=>{e.preventDefault();$('send-link').disabled=true;$('auth-message').textContent='Sending sign-in link…';const {error}=await supabase.auth.signInWithOtp({email:$('email').value.trim(),options:{shouldCreateUser:false,emailRedirectTo:new URL('./',window.location.href).href}});$('send-link').disabled=false;$('auth-message').textContent=error?error.message:'Check your email for a secure sign-in link.';});
 $('logout').addEventListener('click',async()=>{await supabase.auth.signOut();location.reload()});
