@@ -12,6 +12,7 @@ create table if not exists private.registration_rate_limits (
   updated_at timestamptz not null default now(),
   primary key (ip_hash, window_start)
 );
+alter table private.registration_rate_limits enable row level security;
 revoke all on table private.registration_rate_limits from public, anon, authenticated;
 
 create or replace function public.consume_registration_rate_limit(p_ip_hash text)
