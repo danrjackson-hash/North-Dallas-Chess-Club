@@ -1,2 +1,5 @@
 [functions.submit-registration]
 verify_jwt = false
+
+[functions.invite-player]
+verify_jwt = false
