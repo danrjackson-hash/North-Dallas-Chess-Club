@@ -67,7 +67,7 @@ async function loadHistory(){
  $('game-history').innerHTML=data?.length?data.map(g=>'<div class="item"><strong>'+gameLabel(g)+'</strong><div class="muted">'+new Date(g.played_at).toLocaleString()+'</div></div>').join(''):'No approved games yet.';
 }
 async function loadAdmin(){
- const [rosterRes,profilesRes,pendRes,requestsRes]=await Promise.all([
+ const [rosterRes,profilesRes,pendRes,requestsRes,invitesRes]=await Promise.all([
   supabase.from('players').select('*').order('display_name'),
   supabase.from('profiles').select('id,display_name,email,player_id,role').order('display_name'),
   supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false}),
@@ -81,7 +81,7 @@ async function loadAdmin(){
  }).join('')||'No players yet.';
  const unlinked=accounts.filter(a=>!a.player_id);
  const availablePlayers=data.filter(p=>p.is_active&&!accounts.some(a=>a.player_id===p.id));
- $('unlinked-accounts').innerHTML=profilesRes.error?esc(profilesRes.error.message):unlinked.length?unlinked.map(a=>'<div class="item"><strong>'+esc(a.email||a.display_name)+'</strong><div class="muted">'+esc(a.display_name)+' · '+esc(a.role)+'</div><label>Link to roster player</label><div class="grid"><select data-link-player="'+a.id+'"><option value="">Choose a player…</option>'+availablePlayers.map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+'</option>').join('')+'</select><button data-link-account="'+a.id+'">Link account</button></div></div>').join(''):'No unlinked accounts. New invited accounts will appear here after they accept the invitation.';
+ $('unlinked-accounts').innerHTML=profilesRes.error?esc(profilesRes.error.message):unlinked.length?unlinked.map(a=>'<div class="item"><strong>'+esc(a.email||a.display_name)+'</strong><div class="muted">'+esc(a.display_name)+' · '+esc(a.role)+'</div><label>Link to roster player</label><div class="grid"><select data-link-player="'+a.id+'"><option value="">Choose a player…</option>'+availablePlayers.map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+'</option>').join('')+'</select><button data-link-account="'+a.id+'">Link account</button></div></div>').join(''):'No unlinked accounts. Approved invitees are linked automatically when they accept their invitation.';
  document.querySelectorAll('[data-link-account]').forEach(b=>b.addEventListener('click',async()=>{
   const accountId=b.dataset.linkAccount,select=document.querySelector('[data-link-player="'+accountId+'"]'),player=players.concat(data).find(p=>p.id===select?.value)||data.find(p=>p.id===select?.value);
   if(!select?.value){alert('Choose a roster player first.');return}
