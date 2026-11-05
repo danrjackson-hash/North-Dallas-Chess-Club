@@ -19,5 +19,5 @@ jobs:
           persist-credentials: false
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.122.1
       - run: supabase functions deploy submit-registration --project-ref "$SUPABASE_PROJECT_ID" --use-api --yes
