@@ -50,12 +50,27 @@ Deno.serve(async (req: Request) => {
     return response({ error: "Invitations are temporarily unavailable." }, 503);
   }
 
-  const authClient = createClient(supabaseUrl, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data: authData, error: authError } = await authClient.auth.getUser(accessToken);
-  if (authError || !authData.user) {
-    console.error("Invitation auth check failed: Supabase rejected the user token.", authError?.message || "No user returned.");
+  // Verify the caller's access token directly against Supabase Auth.
+  // This avoids relying on an SDK client's in-memory session state in an Edge Function.
+  let verifiedUser: { id: string } | null = null;
+  try {
+    const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (verifyResponse.ok) {
+      const authUser = await verifyResponse.json();
+      if (typeof authUser?.id === "string") verifiedUser = { id: authUser.id };
+    } else {
+      const detail = await verifyResponse.text();
+      console.error("Invitation auth check failed: Supabase Auth returned", verifyResponse.status, detail.slice(0, 500));
+    }
+  } catch (error) {
+    console.error("Invitation auth check failed during token verification:", error instanceof Error ? error.message : "Unknown error");
+  }
+  if (!verifiedUser) {
     return response({ error: "Your sign-in session is invalid. Please sign in again." }, 401);
   }
 
@@ -65,7 +80,7 @@ Deno.serve(async (req: Request) => {
   const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("role")
-    .eq("id", authData.user.id)
+    .eq("id", verifiedUser.id)
     .maybeSingle();
   if (profileError) {
     console.error("Could not verify invitation administrator:", profileError.message);
