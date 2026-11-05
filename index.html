@@ -21,6 +21,7 @@
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm';
+import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);let user=null,profile=null,players=[];
@@ -67,10 +68,11 @@ async function loadHistory(){
  $('game-history').innerHTML=data?.length?data.map(g=>'<div class="item"><strong>'+gameLabel(g)+'</strong><div class="muted">'+new Date(g.played_at).toLocaleString()+'</div></div>').join(''):'No approved games yet.';
 }
 async function loadAdmin(){
- const [rosterRes,profilesRes,pendRes]=await Promise.all([
+ const [rosterRes,profilesRes,pendRes,requestsRes]=await Promise.all([
   supabase.from('players').select('*').order('display_name'),
   supabase.from('profiles').select('id,display_name,email,player_id,role').order('display_name'),
-  supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false})
+  supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false}),
+  supabase.from('registration_requests').select('*').eq('status','pending').order('submitted_at',{ascending:true})
  ]);
  const data=rosterRes.data||[],accounts=profilesRes.data||[];
  $('roster').innerHTML=rosterRes.error?esc(rosterRes.error.message):data.map(p=>{
@@ -89,6 +91,24 @@ async function loadAdmin(){
  }));
  document.querySelectorAll('[data-deactivate]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Deactivate this player? Their historical games and ratings remain.'))return;const {error}=await supabase.from('players').update({is_active:false}).eq('id',b.dataset.deactivate);if(error)alert(error.message);else{await load();}}));
  $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
+ $('registration-requests').innerHTML=requestsRes.error?esc(requestsRes.error.message):(requestsRes.data||[]).length?requestsRes.data.map(r=>'<div class="item"><strong>'+esc(r.full_name)+'</strong><div class="muted">'+esc(r.email)+' · '+new Date(r.submitted_at).toLocaleString()+'</div><div class="actions"><button data-reg-review="'+r.id+'" data-approve="true">Approve & add player</button><button class="danger" data-reg-review="'+r.id+'" data-approve="false">Reject</button></div></div>').join(''):'No new registration requests.';
+ document.querySelectorAll('[data-reg-review]').forEach(b=>b.addEventListener('click',async()=>{
+  const approve=b.dataset.approve==='true';
+  const req=(requestsRes.data||[]).find(x=>x.id===b.dataset.regReview);
+  if(!confirm(approve?'Approve '+req.full_name+' and add them to the roster at 1400?':'Reject '+req.full_name+'’s registration request?'))return;
+  const {error}=await supabase.rpc('review_registration_request',{p_request_id:b.dataset.regReview,p_approve:approve});
+  if(error){alert(error.message);return;}await load();
+ }));
+ const registrationUrl=new URL('./register.html',window.location.href).href;
+ $('registration-url').textContent=registrationUrl;
+ try{await QRCode.toCanvas($('registration-qr'),registrationUrl,{width:240,margin:2,errorCorrectionLevel:'H'});}catch(e){$('registration-url').textContent+=' (QR generation failed)';}
+ $('open-registration').onclick=()=>window.open(registrationUrl,'_blank','noopener');
+ $('print-qr').onclick=()=>{
+  const dataUrl=$('registration-qr').toDataURL('image/png'),w=window.open('','_blank');
+  if(!w){alert('Please allow pop-ups to print the QR code.');return;}
+  w.document.write('<!doctype html><html><head><title>North Dallas Chess Club Registration</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:35px}img{width:320px;height:320px}p{overflow-wrap:anywhere;font-size:12px}</style></head><body><h1>Join North Dallas Chess Club</h1><p>Scan to request membership</p><img src="'+dataUrl+'"><p>'+registrationUrl+'</p></body></html>');
+  w.document.close();w.onload=()=>w.print();
+ };
 }
 $('login').addEventListener('submit',async e=>{e.preventDefault();$('send-link').disabled=true;$('auth-message').textContent='Sending sign-in link…';const {error}=await supabase.auth.signInWithOtp({email:$('email').value.trim(),options:{shouldCreateUser:false,emailRedirectTo:new URL('./',window.location.href).href}});$('send-link').disabled=false;$('auth-message').textContent=error?error.message:'Check your email for a secure sign-in link.';});
 $('logout').addEventListener('click',async()=>{await supabase.auth.signOut();location.reload()});
