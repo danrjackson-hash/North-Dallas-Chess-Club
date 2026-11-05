@@ -1,0 +1,23 @@
+name: Deploy registration function
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: alnbhfowsyaxlovuplbk
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: rebuild/fresh-app
+          persist-credentials: false
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase functions deploy submit-registration --project-ref "$SUPABASE_PROJECT_ID" --use-api
