@@ -35,6 +35,8 @@ Deno.serve(async (req: Request) => {
     return response({ error: "Invalid request." }, 400);
   }
 
+  if (!body || typeof body !== "object") return response({ error: "Invalid request." }, 400);
+
   // Keep the existing honeypot. Quietly discard likely bot submissions.
   if (typeof body.website === "string" && body.website.trim()) {
     return response({ ok: true });
