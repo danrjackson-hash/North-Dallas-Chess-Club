@@ -328,5 +328,8 @@ begin
 end;
 $$;
 
+revoke all on function public.is_club_admin() from public, anon;
+grant execute on function public.is_club_admin() to authenticated;
 revoke all on function public.recalculate_ratings() from public, anon, authenticated;
+revoke all on function public.review_game_submission(uuid, boolean, text) from public, anon;
 grant execute on function public.review_game_submission(uuid, boolean, text) to authenticated;
