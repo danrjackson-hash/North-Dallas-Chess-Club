@@ -25,7 +25,10 @@ Deno.serve(async (req: Request) => {
 
   const authorization = req.headers.get("authorization") || "";
   const accessToken = authorization.replace(/^Bearer\s+/i, "").trim();
-  if (!accessToken) return response({ error: "Please sign in as a club administrator." }, 401);
+  if (!accessToken) {
+    console.error("Invitation auth check failed: Authorization bearer token was missing.");
+    return response({ error: "Please sign in as a club administrator." }, 401);
+  }
 
   let body: { request_id?: unknown };
   try {
@@ -52,6 +55,7 @@ Deno.serve(async (req: Request) => {
   });
   const { data: authData, error: authError } = await authClient.auth.getUser(accessToken);
   if (authError || !authData.user) {
+    console.error("Invitation auth check failed: Supabase rejected the user token.", authError?.message || "No user returned.");
     return response({ error: "Your sign-in session is invalid. Please sign in again." }, 401);
   }
 
