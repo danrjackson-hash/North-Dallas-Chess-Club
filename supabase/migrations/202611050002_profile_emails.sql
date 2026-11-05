@@ -25,3 +25,16 @@ where p.id = u.id and p.email is distinct from u.email;
 
 create index if not exists profiles_email_lower_idx on public.profiles (lower(email))
 where email is not null;
+
+-- Keep former players visible in historical game records without showing them as opponents.
+drop policy if exists "active roster readable by signed-in users" on public.players;
+create policy "roster readable for active players and game history" on public.players
+for select to authenticated using (
+  is_active
+  or public.is_club_admin()
+  or exists (
+    select 1 from public.games g
+    where g.voided_at is null
+      and public.players.id in (g.white_player_id, g.black_player_id)
+  )
+);
