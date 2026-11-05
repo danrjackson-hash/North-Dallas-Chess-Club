@@ -15,7 +15,7 @@
 <section id="submit" class="hidden"><div class="panel"><h2>Submit a game result</h2><p class="muted">The other player must approve the result before ratings change.</p><form id="submission-form"><div class="grid"><div><label>Opponent</label><select id="opponent" required></select></div><div><label>Which color did you play?</label><select id="color"><option value="white">White</option><option value="black">Black</option></select></div><div><label>Result</label><select id="my-result"><option value="win">I won</option><option value="draw">Draw</option><option value="loss">I lost</option></select></div><div><label>Date and time</label><input id="played-at" type="datetime-local" required></div></div><label>Optional note</label><textarea id="comments" maxlength="1000" placeholder="Anything the other player or admin should know"></textarea><div class="actions"><button id="submit-result">Submit for approval</button></div></form><div id="submit-message" class="muted"></div></div></section>
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Approved game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
-<section id="admin" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Display this permanent code at the club. Players can scan it to request membership; you approve each request before anyone joins the roster.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div><div class="panel"><h2>New player requests</h2><div id="registration-requests" class="muted">Loading…</div></div><div class="panel"><h2>Add a player</h2><form id="add-player"><label>Player's full name</label><input id="new-player-name" maxlength="80" required placeholder="First and last name"><div class="actions"><button>Add player (1400)</button></div></form><div id="admin-message" class="muted"></div></div><div class="panel"><h2>Invite a player</h2><p>First add the person to the club roster above. Then create their account in the <a href="https://supabase.com/dashboard/project/alnbhfowsyaxlovuplbk/auth/users" target="_blank" rel="noopener">Supabase user dashboard</a> using <strong>Add user → Send invitation</strong>. Use the email address they will sign in with. Once they accept, their account will appear below and you can link it to their roster entry.</p><p class="muted">The app intentionally does not store a Supabase secret key or send invitations itself.</p></div><div class="panel"><h2>Unlinked accounts</h2><div id="unlinked-accounts" class="muted">Loading…</div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="admin" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Display this permanent code at the club. Players can scan it to request membership; you approve each request before anyone joins the roster.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div><div class="panel"><h2>New player requests</h2><div id="registration-requests" class="muted">Loading…</div></div><div class="panel"><h2>Approved players awaiting invitation</h2><div id="registration-invitations" class="muted">Loading…</div></div><div class="panel"><h2>Add a player</h2><form id="add-player"><label>Player's full name</label><input id="new-player-name" maxlength="80" required placeholder="First and last name"><div class="actions"><button>Add player (1400)</button></div></form><div id="admin-message" class="muted"></div></div><div class="panel"><h2>Player invitations</h2><p>When you approve a new registration, the app automatically sends an invitation email to the address the player supplied. After accepting, their account is automatically linked to their roster entry.</p><p class="muted">If an invitation cannot be sent, the approved player will appear in the retry list above.</p></div><div class="panel"><h2>Unlinked accounts</h2><div id="unlinked-accounts" class="muted">Loading…</div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -71,7 +71,8 @@ async function loadAdmin(){
   supabase.from('players').select('*').order('display_name'),
   supabase.from('profiles').select('id,display_name,email,player_id,role').order('display_name'),
   supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false}),
-  supabase.from('registration_requests').select('*').eq('status','pending').order('submitted_at',{ascending:true})
+  supabase.from('registration_requests').select('*').eq('status','pending').order('submitted_at',{ascending:true}),
+  supabase.from('registration_requests').select('*').eq('status','approved').is('invitation_sent_at',null).order('reviewed_at',{ascending:false})
  ]);
  const data=rosterRes.data||[],accounts=profilesRes.data||[];
  $('roster').innerHTML=rosterRes.error?esc(rosterRes.error.message):data.map(p=>{
@@ -91,12 +92,28 @@ async function loadAdmin(){
  document.querySelectorAll('[data-deactivate]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Deactivate this player? Their historical games and ratings remain.'))return;const {error}=await supabase.from('players').update({is_active:false}).eq('id',b.dataset.deactivate);if(error)alert(error.message);else{await load();}}));
  $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
  $('registration-requests').innerHTML=requestsRes.error?esc(requestsRes.error.message):(requestsRes.data||[]).length?requestsRes.data.map(r=>'<div class="item"><strong>'+esc(r.full_name)+'</strong><div class="muted">'+esc(r.email)+' · '+new Date(r.submitted_at).toLocaleString()+'</div><div class="actions"><button data-reg-review="'+r.id+'" data-approve="true">Approve & add player</button><button class="danger" data-reg-review="'+r.id+'" data-approve="false">Reject</button></div></div>').join(''):'No new registration requests.';
+ $('registration-invitations').innerHTML=invitesRes.error?esc(invitesRes.error.message):(invitesRes.data||[]).length?invitesRes.data.map(r=>'<div class="item"><strong>'+esc(r.full_name)+'</strong><div class="muted">'+esc(r.email)+' · approved '+(r.reviewed_at?new Date(r.reviewed_at).toLocaleString():'')+'</div><div class="actions"><button data-send-invite="'+r.id+'">Send invitation email</button></div></div>').join(''):'All approved registrations have had an invitation sent.';
+ document.querySelectorAll('[data-send-invite]').forEach(b=>b.addEventListener('click',async()=>{
+  if(!confirm('Send an account invitation to this player?'))return;
+  b.disabled=true;
+  const {data,error}=await supabase.functions.invoke('invite-player',{body:{request_id:b.dataset.sendInvite}});
+  if(error){alert('The player is on the roster, but the invitation could not be sent: '+error.message);b.disabled=false;return;}
+  alert('Invitation email sent to '+data.email+'.');
+  await load();
+ }));
  document.querySelectorAll('[data-reg-review]').forEach(b=>b.addEventListener('click',async()=>{
   const approve=b.dataset.approve==='true';
   const req=(requestsRes.data||[]).find(x=>x.id===b.dataset.regReview);
   if(!confirm(approve?'Approve '+req.full_name+' and add them to the roster at 1400?':'Reject '+req.full_name+'’s registration request?'))return;
+  b.disabled=true;
   const {error}=await supabase.rpc('review_registration_request',{p_request_id:b.dataset.regReview,p_approve:approve});
-  if(error){alert(error.message);return;}await load();
+  if(error){alert(error.message);b.disabled=false;return;}
+  if(approve){
+   const {data:inviteData,error:inviteError}=await supabase.functions.invoke('invite-player',{body:{request_id:b.dataset.regReview}});
+   if(inviteError)alert('Player added to the roster, but the invitation could not be sent. You can retry it in “Approved players awaiting invitation.” Details: '+inviteError.message);
+   else alert('Player added to the roster and invitation email sent to '+inviteData.email+'.');
+  }
+  await load();
  }));
  const registrationUrl=new URL('./register.html',window.location.href).href;
  $('registration-url').textContent=registrationUrl;
