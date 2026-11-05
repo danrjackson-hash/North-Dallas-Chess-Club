@@ -29,13 +29,13 @@ function tab(id){['leaderboard','submit','reviews','history','admin'].forEach(x=
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 function localNow(){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
 async function load(){
- const [pRes,rosterRes]=await Promise.all([supabase.from('profiles').select('*').eq('id',user.id).single(),supabase.from('players').select('id,display_name,current_rating,is_active').eq('is_active',true).order('display_name')]);
+ const [pRes,rosterRes]=await Promise.all([supabase.from('profiles').select('*').eq('id',user.id).single(),supabase.from('players').select('id,display_name,current_rating,is_active').order('display_name')]);
  if(pRes.error)throw pRes.error;profile=pRes.data;players=rosterRes.data||[];
  $('auth').classList.add('hidden');$('app').classList.remove('hidden');
  $('welcome').textContent=profile.display_name;$('role-label').textContent=profile.role==='admin'?'Club administrator':'Club player';
  document.querySelectorAll('.admin-only').forEach(x=>x.classList.toggle('hidden',profile.role!=='admin'));
  $('played-at').value=localNow();
- const options=players.filter(p=>p.id!==profile.player_id).map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+' · '+p.current_rating+'</option>').join('');
+ const options=players.filter(p=>p.is_active&&p.id!==profile.player_id).map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+' · '+p.current_rating+'</option>').join('');
  $('opponent').innerHTML=options||'<option value="">No opponents available</option>';
  await Promise.all([loadBoard(),loadReviews(),loadHistory(),profile.role==='admin'?loadAdmin():Promise.resolve()]);
 }
