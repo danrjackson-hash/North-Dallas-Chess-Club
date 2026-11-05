@@ -20,4 +20,4 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase functions deploy submit-registration --project-ref "$SUPABASE_PROJECT_ID" --use-api
+      - run: supabase functions deploy submit-registration --project-ref "$SUPABASE_PROJECT_ID" --use-api --yes
