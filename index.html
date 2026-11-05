@@ -16,7 +16,7 @@
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Approved game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
 <section id="invite" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Share this code with friends. They can scan it to request membership; the club admin approves each request before anyone joins the roster.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div></section>
-<section id="admin" class="hidden"><div class="panel"><h2>New player requests</h2><div id="registration-requests" class="muted">Loading…</div></div><div class="panel"><h2>Player invitations</h2><p>When you approve a new registration, the app automatically sends an invitation email to the address the player supplied. After accepting, their account is automatically linked to their roster entry.</p></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="admin" class="hidden"><div class="panel"><h2>New player requests</h2><div id="registration-requests" class="muted">Loading…</div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -24,15 +24,50 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-const $=id=>document.getElementById(id);let user=null,profile=null,players=[];
+const $=id=>document.getElementById(id);let user=null,profile=null,players=[],playerStatusChannel=null,playerStatusTimer=null,playerStatusPlayerId=null,checkingPlayerStatus=false,signoutNotice='';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function message(id,text,kind=''){ $(id).innerHTML=text?'<div class="notice '+kind+'">'+esc(text)+'</div>':''; }
 function tab(id){['leaderboard','submit','reviews','history','invite','admin'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 function localNow(){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
+async function signOutInactivePlayer(){
+ signoutNotice='Your club account has been deactivated. Contact the club administrator if you think this is a mistake.';
+ stopPlayerStatusGuard();
+ await supabase.auth.signOut({scope:'local'});
+ $('app').classList.add('hidden');$('auth').classList.remove('hidden');$('auth-message').textContent=signoutNotice;
+}
+async function checkPlayerStatus(){
+ if(!profile?.player_id||checkingPlayerStatus)return;
+ checkingPlayerStatus=true;
+ try{
+  const {data,error}=await supabase.from('players').select('is_active').eq('id',profile.player_id).maybeSingle();
+  if(!error&&(!data||data.is_active===false))await signOutInactivePlayer();
+ }finally{checkingPlayerStatus=false;}
+}
+function stopPlayerStatusGuard(){
+ if(playerStatusTimer){clearInterval(playerStatusTimer);playerStatusTimer=null;}
+ if(playerStatusChannel){void supabase.removeChannel(playerStatusChannel);playerStatusChannel=null;}
+ playerStatusPlayerId=null;
+}
+function startPlayerStatusGuard(playerId){
+ if(playerStatusPlayerId===playerId)return;
+ stopPlayerStatusGuard();playerStatusPlayerId=playerId;
+ playerStatusChannel=supabase.channel('player-status-'+playerId)
+  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'players',filter:'id=eq.'+playerId},payload=>{
+   if(payload.new?.is_active===false)void signOutInactivePlayer();
+  }).subscribe();
+ playerStatusTimer=setInterval(()=>void checkPlayerStatus(),30000);
+}
+window.addEventListener('focus',()=>void checkPlayerStatus());
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void checkPlayerStatus();});
 async function load(){
  const [pRes,rosterRes,passwordRes]=await Promise.all([supabase.from('profiles').select('*').eq('id',user.id).single(),supabase.from('players').select('id,display_name,current_rating,is_active').order('display_name'),supabase.rpc('current_user_has_password')]);
- if(pRes.error)throw pRes.error;profile=pRes.data;players=rosterRes.data||[];
+ if(pRes.error)throw pRes.error;if(rosterRes.error)throw rosterRes.error;profile=pRes.data;players=rosterRes.data||[];
+ if(profile.player_id){
+  const ownPlayer=players.find(p=>p.id===profile.player_id);
+  if(!ownPlayer||!ownPlayer.is_active){await signOutInactivePlayer();return;}
+  startPlayerStatusGuard(profile.player_id);
+ }else stopPlayerStatusGuard();
  const needsPasswordSetup=!passwordRes.error&&passwordRes.data===false;
  $('password-panel').open=needsPasswordSetup;$('password-panel').classList.toggle('password-setup-required',needsPasswordSetup);
  $('password-panel-title').textContent=needsPasswordSetup?'Welcome! Set up your password':'Set or change your password';
@@ -133,9 +168,9 @@ let authGeneration=0;
 async function handleAuthState(event,session){
  if(!session?.user){
   authGeneration++;
-  user=null;profile=null;players=[];
+  user=null;profile=null;players=[];stopPlayerStatusGuard();
   $('app').classList.add('hidden');$('auth').classList.remove('hidden');
-  $('auth-message').textContent=event==='SIGNED_OUT'?'You have been signed out.':'';
+  $('auth-message').textContent=signoutNotice||(event==='SIGNED_OUT'?'You have been signed out.':'');signoutNotice='';
   return;
  }
  if(user?.id===session.user.id&&!['INITIAL_SESSION','USER_UPDATED','PASSWORD_RECOVERY'].includes(event))return;
