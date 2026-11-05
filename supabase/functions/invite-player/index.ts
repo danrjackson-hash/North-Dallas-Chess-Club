@@ -110,7 +110,7 @@ Deno.serve(async (req: Request) => {
     registration.email,
     {
       redirectTo: appRedirect,
-      data: { display_name: registration.full_name },
+      data: { display_name: registration.full_name, must_set_password: true },
     },
   );
   if (inviteError) {
