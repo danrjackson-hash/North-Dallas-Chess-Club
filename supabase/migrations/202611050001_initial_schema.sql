@@ -159,9 +159,10 @@ drop policy if exists "profiles visible to self or admins" on public.profiles;
 create policy "profiles visible to self or admins" on public.profiles
 for select to authenticated using (id = (select auth.uid()) or public.is_club_admin());
 drop policy if exists "profiles updated by self or admins" on public.profiles;
-create policy "profiles updated by self or admins" on public.profiles
-for update to authenticated using (id = (select auth.uid()) or public.is_club_admin())
-with check (id = (select auth.uid()) or public.is_club_admin());
+drop policy if exists "profiles managed by admins" on public.profiles;
+create policy "profiles managed by admins" on public.profiles
+for update to authenticated using (public.is_club_admin())
+with check (public.is_club_admin());
 
 drop policy if exists "approved games readable by signed-in users" on public.games;
 create policy "approved games readable by signed-in users" on public.games
@@ -257,8 +258,7 @@ as $$
 declare
   s public.game_submissions%rowtype;
   reviewer_player uuid;
-  opponent_player uuid;
-  submitter_name text;
+  submitter_player uuid;
   opponent_user uuid;
   new_game_id uuid;
 begin
@@ -275,7 +275,7 @@ begin
 
   select player_id into reviewer_player from public.profiles where id = auth.uid();
   if not public.is_club_admin()
-     and reviewer_player not in (s.white_player_id, s.black_player_id) then
+     and (reviewer_player is null or reviewer_player not in (s.white_player_id, s.black_player_id)) then
     raise exception 'Only the opponent or a club admin can review this result';
   end if;
 
@@ -307,9 +307,9 @@ begin
             jsonb_build_object('note', left(coalesce(p_note, 'Result rejected'), 1000)));
   end if;
 
-  select display_name into submitter_name from public.profiles where id = s.submitted_by;
+  select player_id into submitter_player from public.profiles where id = s.submitted_by;
   select id into opponent_user from public.profiles
-    where player_id = case when reviewer_player = s.white_player_id then s.black_player_id
+    where player_id = case when submitter_player = s.white_player_id then s.black_player_id
                            else s.white_player_id end;
   insert into public.notifications (recipient_user_id, kind, message, submission_id)
   values (s.submitted_by,
