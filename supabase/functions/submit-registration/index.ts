@@ -54,13 +54,9 @@ Deno.serve(async (req: Request) => {
   if (!clientIp) return response({ error: "Registration is temporarily unavailable. Please try again later." }, 503);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  let serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  try {
-    const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
-    serviceKey = secretKeys.default || serviceKey;
-  } catch {
-    // Fall back to the legacy service-role environment variable when present.
-  }
+  // Use the legacy JWT service-role key with supabase-js; Supabase's new
+  // sb_secret keys must not be sent as a Bearer token by this client library.
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceKey) {
     console.error("Registration function is missing its Supabase environment configuration.");
     return response({ error: "Registration is temporarily unavailable. Please try again later." }, 503);
