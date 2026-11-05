@@ -72,7 +72,7 @@ async function loadAdmin(){
  const {data:pend}=await supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false});
  $('admin-pending').innerHTML=pend?.length?pend.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
 }
-$('login').addEventListener('submit',async e=>{e.preventDefault();$('send-link').disabled=true;$('auth-message').textContent='Sending sign-in link…';const {error}=await supabase.auth.signInWithOtp({email:$('email').value.trim(),options:{shouldCreateUser:false,emailRedirectTo:window.location.origin}});$('send-link').disabled=false;$('auth-message').textContent=error?error.message:'Check your email for a secure sign-in link.';});
+$('login').addEventListener('submit',async e=>{e.preventDefault();$('send-link').disabled=true;$('auth-message').textContent='Sending sign-in link…';const {error}=await supabase.auth.signInWithOtp({email:$('email').value.trim(),options:{shouldCreateUser:false,emailRedirectTo:new URL('./',window.location.href).href}});$('send-link').disabled=false;$('auth-message').textContent=error?error.message:'Check your email for a secure sign-in link.';});
 $('logout').addEventListener('click',async()=>{await supabase.auth.signOut();location.reload()});
 $('submission-form').addEventListener('submit',async e=>{
  e.preventDefault();if(!profile.player_id){message('submit-message','Your account is not linked to a player profile. Ask the club admin to link it.','error');return}
