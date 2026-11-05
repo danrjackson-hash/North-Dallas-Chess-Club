@@ -20,4 +20,5 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.122.1
-      - run: supabase functions deploy submit-registration invite-player --project-ref "$SUPABASE_PROJECT_ID" --use-api --yes
+      - run: supabase functions deploy submit-registration --project-ref "$SUPABASE_PROJECT_ID" --use-api --yes
+      - run: supabase functions deploy invite-player --project-ref "$SUPABASE_PROJECT_ID" --use-api --yes
