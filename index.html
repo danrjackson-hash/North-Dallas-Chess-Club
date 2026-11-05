@@ -10,12 +10,13 @@
 <section id="auth" class="panel"><h2>Sign in</h2><p class="muted">Sign in with your email and password, or use a one-time sign-in link.</p><form id="login"><label>Email address</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Your password"><div class="actions"><button type="button" id="password-login">Sign in</button><button type="button" class="secondary" id="send-link">Email me a sign-in link</button><button type="button" class="secondary" id="forgot-password">Forgot password?</button></div></form><div id="auth-message" class="muted" role="status"></div></section>
 <div id="app" class="hidden">
 <div class="panel no-print"><div class="item-top"><div><strong id="welcome">Welcome</strong><div class="muted" id="role-label"></div></div><button class="secondary" id="logout">Sign out</button></div></div><div class="panel no-print install-panel hidden" id="install-panel"><div class="item-top"><div><strong>Put the club app on your phone</strong><div class="muted">Add a home-screen icon for quick access to club ratings.</div></div><button id="install-app" type="button">Add to Home Screen</button></div><div id="install-help" class="muted" role="status"></div></div><details class="panel no-print" id="password-panel"><summary id="password-panel-title" style="cursor:pointer;font-weight:700">Set or change your password</summary><p class="muted" id="password-panel-copy">Use a password to sign in next time without requesting an email link.</p><form id="password-update"><label>New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"><label>Confirm new password</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="8" required placeholder="Enter it again"><div class="actions"><button id="save-password">Save password</button></div></form><div id="password-message" class="muted"></div></details>
-<nav class="tabs no-print"><button class="tab active" data-tab="leaderboard">Leaderboard</button><button class="tab" data-tab="submit">Submit result</button><button class="tab" data-tab="reviews">Approvals</button><button class="tab" data-tab="history">Game history</button><button class="tab admin-only hidden" data-tab="admin">Admin</button></nav>
+<nav class="tabs no-print"><button class="tab active" data-tab="leaderboard">Leaderboard</button><button class="tab" data-tab="submit">Submit result</button><button class="tab" data-tab="reviews">Approvals</button><button class="tab" data-tab="history">Game history</button><button class="tab" data-tab="invite">Invite a friend</button><button class="tab admin-only hidden" data-tab="admin">Admin</button></nav>
 <section id="leaderboard"><div class="panel"><div class="item-top"><h2>Club standings</h2><button class="secondary no-print" onclick="window.print()">Print</button></div><div id="standings" class="muted">Loading ratings…</div><p class="muted">All new players start at 1400. Blitz rating · K-factor 20.</p></div></section>
 <section id="submit" class="hidden"><div class="panel"><h2>Submit a game result</h2><p class="muted">The other player must approve the result before ratings change.</p><form id="submission-form"><div class="grid"><div><label>Opponent</label><select id="opponent" required></select></div><div><label>Which color did you play?</label><select id="color"><option value="white">White</option><option value="black">Black</option></select></div><div><label>Result</label><select id="my-result"><option value="win">I won</option><option value="draw">Draw</option><option value="loss">I lost</option></select></div><div><label>Date and time</label><input id="played-at" type="datetime-local" required></div></div><label>Optional note</label><textarea id="comments" maxlength="1000" placeholder="Anything the other player or admin should know"></textarea><div class="actions"><button id="submit-result">Submit for approval</button></div></form><div id="submit-message" class="muted"></div></div></section>
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Approved game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
-<section id="admin" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Display this permanent code at the club. Players can scan it to request membership; you approve each request before anyone joins the roster.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div><div class="panel"><h2>New player requests</h2><div id="registration-requests" class="muted">Loading…</div></div><div class="panel"><h2>Add a player</h2><form id="add-player"><label>Player's full name</label><input id="new-player-name" maxlength="80" required placeholder="First and last name"><div class="actions"><button>Add player (1400)</button></div></form><div id="admin-message" class="muted"></div></div><div class="panel"><h2>Player invitations</h2><p>When you approve a new registration, the app automatically sends an invitation email to the address the player supplied. After accepting, their account is automatically linked to their roster entry.</p></div><div class="panel"><h2>Unlinked accounts</h2><div id="unlinked-accounts" class="muted">Loading…</div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="invite" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Share this code with friends. They can scan it to request membership; the club admin approves each request before anyone joins the roster.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div></section>
+<section id="admin" class="hidden"><div class="panel"><h2>New player requests</h2><div id="registration-requests" class="muted">Loading…</div></div><div class="panel"><h2>Player invitations</h2><p>When you approve a new registration, the app automatically sends an invitation email to the address the player supplied. After accepting, their account is automatically linked to their roster entry.</p></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -26,7 +27,7 @@ const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);let user=null,profile=null,players=[];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function message(id,text,kind=''){ $(id).innerHTML=text?'<div class="notice '+kind+'">'+esc(text)+'</div>':''; }
-function tab(id){['leaderboard','submit','reviews','history','admin'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));}
+function tab(id){['leaderboard','submit','reviews','history','invite','admin'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.tab)));
 function localNow(){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
 async function load(){
@@ -43,7 +44,19 @@ async function load(){
  $('played-at').value=localNow();
  const options=players.filter(p=>p.is_active&&p.id!==profile.player_id).map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+' · '+p.current_rating+'</option>').join('');
  $('opponent').innerHTML=options||'<option value="">No opponents available</option>';
- await Promise.all([loadBoard(),loadReviews(),loadHistory(),profile.role==='admin'?loadAdmin():Promise.resolve()]);
+ await Promise.all([loadBoard(),loadReviews(),loadHistory(),loadRegistrationQr(),profile.role==='admin'?loadAdmin():Promise.resolve()]);
+}
+async function loadRegistrationQr(){
+ const registrationUrl=new URL('./register.html',window.location.href).href;
+ $('registration-url').textContent=registrationUrl;
+ try{await QRCode.toCanvas($('registration-qr'),registrationUrl,{width:240,margin:2,errorCorrectionLevel:'H'});}catch(e){$('registration-url').textContent+=' (QR generation failed)';}
+ $('open-registration').onclick=()=>window.open(registrationUrl,'_blank','noopener');
+ $('print-qr').onclick=()=>{
+  const dataUrl=$('registration-qr').toDataURL('image/png'),w=window.open('','_blank');
+  if(!w){alert('Please allow pop-ups to print the QR code.');return;}
+  w.document.write('<!doctype html><html><head><title>North Dallas Chess Club Registration</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:35px}img{width:320px;height:320px}p{overflow-wrap:anywhere;font-size:12px}</style></head><body><h1>Join North Dallas Chess Club</h1><p>Scan to request membership</p><img src="'+dataUrl+'"><p>'+registrationUrl+'</p></body></html>');
+  w.document.close();w.onload=()=>w.print();
+ };
 }
 async function loadBoard(){
  const {data,error}=await supabase.from('players').select('id,display_name,current_rating,is_active').eq('is_active',true).order('current_rating',{ascending:false}).order('display_name');
@@ -79,20 +92,10 @@ async function loadAdmin(){
   supabase.from('registration_requests').select('*').eq('status','pending').order('submitted_at',{ascending:true})
  ]);
  const data=rosterRes.data||[],accounts=profilesRes.data||[];
- $('roster').innerHTML=rosterRes.error?esc(rosterRes.error.message):data.map(p=>{
+ $('roster').innerHTML=rosterRes.error?esc(rosterRes.error.message):data.filter(p=>p.is_active).map(p=>{
   const linked=accounts.find(a=>a.player_id===p.id);
   return '<div class="item item-top"><span><strong>'+esc(p.display_name)+'</strong> · '+p.current_rating+(p.is_active?'':' · inactive')+'<div class="muted">'+(linked?'Account: '+esc(linked.email||linked.display_name)+' · '+esc(linked.role):'No sign-in account linked')+'</div></span>'+(p.is_active?'<button class="danger" data-deactivate="'+p.id+'">Deactivate</button>':'')+'</div>';
  }).join('')||'No players yet.';
- const unlinked=accounts.filter(a=>!a.player_id);
- const availablePlayers=data.filter(p=>p.is_active&&!accounts.some(a=>a.player_id===p.id));
- $('unlinked-accounts').innerHTML=profilesRes.error?esc(profilesRes.error.message):unlinked.length?unlinked.map(a=>'<div class="item"><strong>'+esc(a.email||a.display_name)+'</strong><div class="muted">'+esc(a.display_name)+' · '+esc(a.role)+'</div><label>Link to roster player</label><div class="grid"><select data-link-player="'+a.id+'"><option value="">Choose a player…</option>'+availablePlayers.map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+'</option>').join('')+'</select><button data-link-account="'+a.id+'">Link account</button></div></div>').join(''):'No unlinked accounts. Approved invitees are linked automatically when they accept their invitation.';
- document.querySelectorAll('[data-link-account]').forEach(b=>b.addEventListener('click',async()=>{
-  const accountId=b.dataset.linkAccount,select=document.querySelector('[data-link-player="'+accountId+'"]'),player=players.concat(data).find(p=>p.id===select?.value)||data.find(p=>p.id===select?.value);
-  if(!select?.value){alert('Choose a roster player first.');return}
-  if(!confirm('Link this sign-in account to '+player.display_name+'?'))return;
-  const {error}=await supabase.from('profiles').update({player_id:player.id,display_name:player.display_name}).eq('id',accountId);
-  if(error)alert(error.message);else await loadAdmin();
- }));
  document.querySelectorAll('[data-deactivate]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Deactivate this player? Their historical games and ratings remain.'))return;const {error}=await supabase.from('players').update({is_active:false}).eq('id',b.dataset.deactivate);if(error)alert(error.message);else{await load();}}));
  $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
  $('registration-requests').innerHTML=requestsRes.error?esc(requestsRes.error.message):(requestsRes.data||[]).length?requestsRes.data.map(r=>'<div class="item"><strong>'+esc(r.full_name)+'</strong><div class="muted">'+esc(r.email)+' · '+new Date(r.submitted_at).toLocaleString()+'</div><div class="actions"><button data-reg-review="'+r.id+'" data-approve="true">Approve & add player</button><button class="danger" data-reg-review="'+r.id+'" data-approve="false">Reject</button></div></div>').join(''):'No new registration requests.';
@@ -110,15 +113,7 @@ async function loadAdmin(){
   }
   await load();
  }));
- const registrationUrl=new URL('./register.html',window.location.href).href;
- $('registration-url').textContent=registrationUrl;
- try{await QRCode.toCanvas($('registration-qr'),registrationUrl,{width:240,margin:2,errorCorrectionLevel:'H'});}catch(e){$('registration-url').textContent+=' (QR generation failed)';}
- $('open-registration').onclick=()=>window.open(registrationUrl,'_blank','noopener');
- $('print-qr').onclick=()=>{
-  const dataUrl=$('registration-qr').toDataURL('image/png'),w=window.open('','_blank');
-  if(!w){alert('Please allow pop-ups to print the QR code.');return;}
-  w.document.write('<!doctype html><html><head><title>North Dallas Chess Club Registration</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:35px}img{width:320px;height:320px}p{overflow-wrap:anywhere;font-size:12px}</style></head><body><h1>Join North Dallas Chess Club</h1><p>Scan to request membership</p><img src="'+dataUrl+'"><p>'+registrationUrl+'</p></body></html>');
-  w.document.close();w.onload=()=>w.print();
+
  };
 }
 $('login').addEventListener('submit',e=>e.preventDefault());
@@ -136,7 +131,6 @@ $('submission-form').addEventListener('submit',async e=>{
  const {error}=await supabase.from('game_submissions').insert({submitted_by:user.id,white_player_id:white,black_player_id:black,result,played_at:new Date($('played-at').value).toISOString(),comments:$('comments').value.trim()||null});
  if(error)message('submit-message',error.message,'error');else{message('submit-message','Result submitted. Ratings will update after your opponent or an admin approves it.','success');$('comments').value='';await loadReviews();tab('reviews')}
 });
-$('add-player').addEventListener('submit',async e=>{e.preventDefault();const name=$('new-player-name').value.trim();if(!name)return;const {error}=await supabase.from('players').insert({display_name:name,starting_rating:1400,current_rating:1400});if(error)message('admin-message',error.message,'error');else{$('new-player-name').value='';message('admin-message','Player added at 1400.','success');await load();}});
 let authGeneration=0;
 async function handleAuthState(event,session){
  if(!session?.user){
