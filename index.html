@@ -125,7 +125,30 @@ $('submission-form').addEventListener('submit',async e=>{
  if(error)message('submit-message',error.message,'error');else{message('submit-message','Result submitted. Ratings will update after your opponent or an admin approves it.','success');$('comments').value='';await loadReviews();tab('reviews')}
 });
 $('add-player').addEventListener('submit',async e=>{e.preventDefault();const name=$('new-player-name').value.trim();if(!name)return;const {error}=await supabase.from('players').insert({display_name:name,starting_rating:1400,current_rating:1400});if(error)message('admin-message',error.message,'error');else{$('new-player-name').value='';message('admin-message','Player added at 1400.','success');await load();}});
-supabase.auth.onAuthStateChange(async(_event,session)=>{if(session?.user){user=session.user;try{await load()}catch(e){message('auth-message',e.message,'error');}}});
-const {data:{session}}=await supabase.auth.getSession();if(session?.user){user=session.user;try{await load()}catch(e){$('auth').classList.remove('hidden');$('auth-message').textContent=e.message;}}
+let authGeneration=0;
+async function handleAuthState(event,session){
+ if(!session?.user){
+  authGeneration++;
+  user=null;profile=null;players=[];
+  $('app').classList.add('hidden');$('auth').classList.remove('hidden');
+  $('auth-message').textContent=event==='SIGNED_OUT'?'You have been signed out.':'';
+  return;
+ }
+ if(user?.id===session.user.id&&!['INITIAL_SESSION','USER_UPDATED','PASSWORD_RECOVERY'].includes(event))return;
+ const generation=++authGeneration;
+ user=session.user;
+ try{
+  await load();
+ }catch(e){
+  if(generation!==authGeneration)return;
+  $('app').classList.add('hidden');$('auth').classList.remove('hidden');
+  $('auth-message').textContent=e.message;
+ }
+}
+supabase.auth.onAuthStateChange((event,session)=>{
+ // Do not await app/database work inside Supabase's auth callback.
+ // Deferring it lets the auth client's internal lock be released first.
+ setTimeout(()=>{void handleAuthState(event,session)},0);
+});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script></body></html>
