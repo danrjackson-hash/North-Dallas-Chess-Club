@@ -113,8 +113,6 @@ async function loadAdmin(){
   }
   await load();
  }));
-
- };
 }
 $('login').addEventListener('submit',e=>e.preventDefault());
 $('password-login').addEventListener('click',async()=>{const email=$('email').value.trim(),password=$('password').value;if(!email||!password){$('auth-message').textContent='Enter your email address and password.';return}$('password-login').disabled=true;$('auth-message').textContent='Signing in…';const {error}=await supabase.auth.signInWithPassword({email,password});$('password-login').disabled=false;$('auth-message').textContent=error?error.message:'';});
