@@ -28,7 +28,7 @@ Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin");
   if (origin !== allowedOrigin) return response({ error: "Request not allowed." }, 403);
 
-  let body: { full_name?: unknown; email?: unknown; website?: unknown };
+  let body: { full_name?: unknown; email?: unknown; skill_level?: unknown; website?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -44,8 +44,13 @@ Deno.serve(async (req: Request) => {
 
   const fullName = typeof body.full_name === "string" ? body.full_name.trim() : "";
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const skillLevel = typeof body.skill_level === "string" ? body.skill_level : "";
+  const allowedSkillLevels = ["Beginner", "Intermediate", "Advanced", "Expert"];
   if (!fullName || fullName.length > 80 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return response({ error: "Please enter a valid name and email address." }, 400);
+  }
+  if (!allowedSkillLevels.includes(skillLevel)) {
+    return response({ error: "Please choose a valid starting skill level." }, 400);
   }
 
   // Supabase's hosted edge ingress supplies this client address header.
@@ -85,6 +90,7 @@ Deno.serve(async (req: Request) => {
   const { error: insertError } = await admin.from("registration_requests").insert({
     full_name: fullName,
     email,
+    skill_level: skillLevel,
   });
 
   if (insertError?.code === "23505") {
