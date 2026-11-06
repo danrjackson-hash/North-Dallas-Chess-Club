@@ -9,7 +9,7 @@
 <main>
 <section id="auth" class="panel"><h2>Sign in</h2><p class="muted">Sign in with your email and password, or use a one-time sign-in link.</p><form id="login"><label>Email address</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Your password"><div class="actions"><button type="button" id="password-login">Sign in</button><button type="button" class="secondary" id="send-link">Email me a sign-in link</button><button type="button" class="secondary" id="forgot-password">Forgot password?</button></div></form><div id="auth-message" class="muted" role="status"></div></section>
 <div id="app" class="hidden">
-<div class="panel no-print"><div class="item-top"><div><strong id="welcome">Welcome</strong><div class="muted" id="role-label"></div></div><button class="secondary" id="logout">Sign out</button></div></div><div class="panel no-print install-panel hidden" id="install-panel"><div class="item-top"><div><strong>Put the club app on your phone</strong><div class="muted">Add a home-screen icon for quick access to club ratings.</div></div><button id="install-app" type="button">Add to Home Screen</button></div><div id="install-help" class="muted" role="status"></div></div><details class="panel no-print" id="password-panel"><summary id="password-panel-title" style="cursor:pointer;font-weight:700">Set or change your password</summary><p class="muted" id="password-panel-copy"></p><form id="password-update"><label>New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"><label>Confirm new password</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="8" required placeholder="Enter it again"><div class="actions"><button id="save-password">Save password</button></div></form><div id="password-message" class="muted"></div></details>
+<div class="panel no-print"><div class="item-top"><div><strong id="welcome">Welcome</strong><div class="muted" id="role-label"></div></div><div class="actions" style="margin:0"><button class="secondary" id="refresh-app" type="button">Refresh app</button><button class="secondary" id="logout" type="button">Sign out</button></div></div></div><div class="panel no-print install-panel hidden" id="install-panel"><div class="item-top"><div><strong>Put the club app on your phone</strong><div class="muted">Add a home-screen icon for quick access to club ratings.</div></div><button id="install-app" type="button">Add to Home Screen</button></div><div id="install-help" class="muted" role="status"></div></div><details class="panel no-print" id="password-panel"><summary id="password-panel-title" style="cursor:pointer;font-weight:700">Set or change your password</summary><p class="muted" id="password-panel-copy"></p><form id="password-update"><label>New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"><label>Confirm new password</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="8" required placeholder="Enter it again"><div class="actions"><button id="save-password">Save password</button></div></form><div id="password-message" class="muted"></div></details>
 <nav class="tabs no-print"><button class="tab active" data-tab="leaderboard">Leaderboard</button><button class="tab" data-tab="submit">Submit result</button><button class="tab" data-tab="reviews">Approvals</button><button class="tab" data-tab="history">Game history</button><button class="tab" data-tab="invite">Invite a friend</button><button class="tab admin-only hidden" data-tab="admin">Admin</button></nav>
 <section id="leaderboard"><div class="panel"><div class="item-top"><h2>Club standings</h2><button class="secondary no-print" onclick="window.print()">Print</button></div><div id="standings" class="muted">Loading ratings…</div></div></section>
 <section id="submit" class="hidden"><div class="panel"><h2>Submit a game result</h2><p class="muted">The other player must approve the result before ratings change.</p><form id="submission-form"><div class="grid"><div><label>Opponent</label><select id="opponent" required></select></div><div><label>Which color did you play?</label><select id="color"><option value="white">White</option><option value="black">Black</option></select></div><div><label>Result</label><select id="my-result"><option value="win">I won</option><option value="draw">Draw</option><option value="loss">I lost</option></select></div><div><label>Date and time</label><input id="played-at" type="datetime-local" required></div></div><label>Optional note</label><textarea id="comments" maxlength="1000" placeholder="Anything the other player or admin should know"></textarea><div class="actions"><button id="submit-result">Submit for approval</button></div></form><div id="submit-message" class="muted"></div></div></section>
@@ -69,10 +69,11 @@ async function load(){
   startPlayerStatusGuard(profile.player_id);
  }else stopPlayerStatusGuard();
  const invitationFlow=location.hash.includes('type=invite')||location.search.includes('type=invite')||user.user_metadata?.must_set_password===true;
- const needsPasswordSetup=invitationFlow||(!passwordRes.error&&passwordRes.data===false);
+ const recoveryFlow=location.hash.includes('type=recovery')||location.search.includes('type=recovery');
+ const needsPasswordSetup=invitationFlow||recoveryFlow||(!passwordRes.error&&passwordRes.data===false);
  $('password-panel').open=needsPasswordSetup;$('password-panel').classList.toggle('password-setup-required',needsPasswordSetup);
- $('password-panel-title').textContent=needsPasswordSetup?'Welcome to the club — set your password':'Set or change your password';
- $('password-panel-copy').textContent=needsPasswordSetup?'Please create a password now. You can use it the next time you sign in.':'';
+ $('password-panel-title').textContent=recoveryFlow?'Reset your password':(needsPasswordSetup?'Welcome to the club — set your password':'Set or change your password');
+ $('password-panel-copy').textContent=recoveryFlow?'Choose a new password for your club account.':(needsPasswordSetup?'Please create a password now. You can use it the next time you sign in.':'');
  if(passwordRes.error)console.warn('Could not check password setup status:',passwordRes.error.message);
  $('auth').classList.add('hidden');$('app').classList.remove('hidden');
  $('welcome').textContent=profile.display_name;$('role-label').textContent=profile.role==='admin'?'Club administrator':'Club player';
@@ -137,8 +138,32 @@ async function loadAdmin(){
  $('roster').innerHTML=rosterRes.error?esc(rosterRes.error.message):data.filter(p=>p.is_active).map(p=>{
   const linked=accounts.find(a=>a.player_id===p.id);
   const canDeactivate=p.is_active&&linked?.role!=='admin'&&p.id!==profile.player_id;
-  return '<div class="item item-top"><span><strong>'+esc(p.display_name)+'</strong> · '+p.current_rating+(p.is_active?'':' · inactive')+'<div class="muted">'+(linked?'Account: '+esc(linked.email||linked.display_name)+' · '+esc(linked.role):'No sign-in account linked')+'</div></span>'+(canDeactivate?'<button class="danger" data-deactivate="'+p.id+'">Deactivate</button>':'')+'</div>';
+  const accountLabel=linked?'Account: '+esc(linked.email||linked.display_name)+' · '+esc(linked.role):'No sign-in account linked';
+  return '<div class="item"><div class="item-top"><span><strong>'+esc(p.display_name)+'</strong> · '+p.current_rating+'<div class="muted">'+accountLabel+'</div></span><div class="actions" style="margin:0"><button class="secondary" data-edit-name="'+p.id+'">Edit name</button>'+(linked?.email?'<button class="secondary" data-reset-password="'+p.id+'">Send password reset</button>':'')+(canDeactivate?'<button class="danger" data-deactivate="'+p.id+'">Deactivate</button>':'')+'</div></div></div>';
  }).join('')||'No players yet.';
+ document.querySelectorAll('[data-edit-name]').forEach(b=>b.addEventListener('click',async()=>{
+  if(profile?.role!=='admin')return;
+  const player=data.find(p=>p.id===b.dataset.editName);if(!player)return;
+  const entered=prompt('Edit player name:',player.display_name);if(entered===null)return;
+  const displayName=entered.trim();
+  if(!displayName||displayName.length>80){alert('Enter a name between 1 and 80 characters.');return;}
+  if(displayName===player.display_name)return;
+  b.disabled=true;
+  const {error}=await supabase.rpc('admin_update_player_name',{p_player_id:player.id,p_display_name:displayName});
+  if(error){alert('Could not update player name: '+error.message);b.disabled=false;return;}
+  await load();
+ }));
+ document.querySelectorAll('[data-reset-password]').forEach(b=>b.addEventListener('click',async()=>{
+  if(profile?.role!=='admin')return;
+  const linked=accounts.find(a=>a.player_id===b.dataset.resetPassword);
+  if(!linked?.email)return;
+  if(!confirm('Send a password-reset email to '+linked.email+'?'))return;
+  b.disabled=true;
+  const {error}=await supabase.auth.resetPasswordForEmail(linked.email,{redirectTo:new URL('./',window.location.href).href});
+  b.disabled=false;
+  if(error)alert('Could not send password-reset email: '+error.message);
+  else alert('Password-reset email sent to '+linked.email+'. They can open the link and choose a new password.');
+ }));
  document.querySelectorAll('[data-deactivate]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Deactivate this player? Their historical games and ratings remain.'))return;const {error}=await supabase.from('players').update({is_active:false}).eq('id',b.dataset.deactivate);if(error)alert(error.message);else{await load();}}));
  $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
  $('registration-requests').innerHTML=requestsRes.error?esc(requestsRes.error.message):(requestsRes.data||[]).length?requestsRes.data.map(r=>{const rating=({Beginner:1000,Intermediate:1400,Advanced:1800,Expert:2200})[r.skill_level]||1400;return '<div class="item"><strong>'+esc(r.full_name)+'</strong><div class="muted">'+esc(r.email)+' · '+esc(r.skill_level)+' · starting rating '+rating+' · '+new Date(r.submitted_at).toLocaleString()+'</div><div class="actions"><button data-reg-review="'+r.id+'" data-approve="true">Approve & add player</button><button class="danger" data-reg-review="'+r.id+'" data-approve="false">Reject</button></div></div>';}).join(''):'No new registration requests.';
@@ -249,6 +274,27 @@ $('install-app').addEventListener('click',async()=>{
   :isAndroid
    ?'In Chrome, open the browser menu (⋮) and choose “Install app” or “Add to Home screen.”'
    :'Use your browser’s Install button in the address bar, or open its menu and choose “Install app” or “Add to Home screen.”';
+});
+$('refresh-app').addEventListener('click',async()=>{
+ const button=$('refresh-app');
+ button.disabled=true;button.textContent='Refreshing…';
+ try{
+  if('serviceWorker'in navigator){
+   const registration=await navigator.serviceWorker.getRegistration();
+   if(registration){
+    await registration.update();
+    const installing=registration.installing;
+    if(installing&&installing.state!=='activated'&&installing.state!=='redundant'){
+     await new Promise(resolve=>{
+      const finish=()=>resolve();
+      installing.addEventListener('statechange',()=>{if(installing.state==='activated'||installing.state==='redundant')finish();});
+      setTimeout(finish,5000);
+     });
+    }
+   }
+  }
+ }catch(error){console.warn('App update check failed; reloading anyway:',error);}
+ window.location.reload();
 });
 refreshInstallPanel();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
