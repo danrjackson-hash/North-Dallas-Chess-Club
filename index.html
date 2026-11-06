@@ -24,7 +24,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-const $=id=>document.getElementById(id);let user=null,profile=null,players=[],playerStatusChannel=null,playerStatusTimer=null,playerStatusPlayerId=null,checkingPlayerStatus=false,signoutNotice='';
+const $=id=>document.getElementById(id);let user=null,profile=null,players=[],playerStatusChannel=null,playerStatusTimer=null,playerStatusPlayerId=null,checkingPlayerStatus=false,signoutNotice='',passwordRecoveryFlow=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function message(id,text,kind=''){ $(id).innerHTML=text?'<div class="notice '+kind+'">'+esc(text)+'</div>':''; }
 function tab(id){['leaderboard','submit','reviews','history','invite','admin'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));}
@@ -69,7 +69,7 @@ async function load(){
   startPlayerStatusGuard(profile.player_id);
  }else stopPlayerStatusGuard();
  const invitationFlow=location.hash.includes('type=invite')||location.search.includes('type=invite')||user.user_metadata?.must_set_password===true;
- const recoveryFlow=location.hash.includes('type=recovery')||location.search.includes('type=recovery');
+ const recoveryFlow=passwordRecoveryFlow||location.hash.includes('type=recovery')||location.search.includes('type=recovery');
  const needsPasswordSetup=invitationFlow||recoveryFlow||(!passwordRes.error&&passwordRes.data===false);
  $('password-panel').open=needsPasswordSetup;$('password-panel').classList.toggle('password-setup-required',needsPasswordSetup);
  $('password-panel-title').textContent=recoveryFlow?'Reset your password':(needsPasswordSetup?'Welcome to the club — set your password':'Set or change your password');
@@ -207,7 +207,7 @@ $('login').addEventListener('submit',e=>e.preventDefault());
 $('password-login').addEventListener('click',async()=>{const email=$('email').value.trim(),password=$('password').value;if(!email||!password){$('auth-message').textContent='Enter your email address and password.';return}$('password-login').disabled=true;$('auth-message').textContent='Signing in…';const {error}=await supabase.auth.signInWithPassword({email,password});$('password-login').disabled=false;$('auth-message').textContent=error?error.message:'';});
 $('send-link').addEventListener('click',async()=>{const email=$('email').value.trim();if(!email){$('auth-message').textContent='Enter your email address first.';return}$('send-link').disabled=true;$('auth-message').textContent='Sending sign-in link…';const {error}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:new URL('./',window.location.href).href}});$('send-link').disabled=false;$('auth-message').textContent=error?error.message:'Check your email for a secure sign-in link.';});
 $('forgot-password').addEventListener('click',async()=>{const email=$('email').value.trim();if(!email){$('auth-message').textContent='Enter your email address first.';return}$('forgot-password').disabled=true;$('auth-message').textContent='Sending password-reset email…';const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:new URL('./',window.location.href).href});$('forgot-password').disabled=false;$('auth-message').textContent=error?error.message:'Check your email for a password-reset link.';});
-$('password-update').addEventListener('submit',async e=>{e.preventDefault();const password=$('new-password').value,confirmPassword=$('confirm-password').value;if(password.length<8){message('password-message','Use at least 8 characters.','error');return}if(password!==confirmPassword){message('password-message','The passwords do not match.','error');return}$('save-password').disabled=true;const {error}=await supabase.auth.updateUser({password,data:{must_set_password:false}});$('save-password').disabled=false;if(error)message('password-message',error.message,'error');else{$('new-password').value='';$('confirm-password').value='';$('password-panel').open=false;$('password-panel').classList.remove('password-setup-required');$('password-panel-title').textContent='Set or change your password';$('password-panel-copy').textContent='';message('password-message','Password saved. You can now sign in with your email and password.','success');}});
+$('password-update').addEventListener('submit',async e=>{e.preventDefault();const password=$('new-password').value,confirmPassword=$('confirm-password').value;if(password.length<8){message('password-message','Use at least 8 characters.','error');return}if(password!==confirmPassword){message('password-message','The passwords do not match.','error');return}$('save-password').disabled=true;const {error}=await supabase.auth.updateUser({password,data:{must_set_password:false}});$('save-password').disabled=false;if(error)message('password-message',error.message,'error');else{$('new-password').value='';$('confirm-password').value='';$('password-panel').open=false;$('password-panel').classList.remove('password-setup-required');$('password-panel-title').textContent='Set or change your password';$('password-panel-copy').textContent='';passwordRecoveryFlow=false;message('password-message','Password saved. You can now sign in with your email and password.','success');}});
 $('logout').addEventListener('click',async()=>{await supabase.auth.signOut();location.reload()});
 $('submission-form').addEventListener('submit',async e=>{
  e.preventDefault();if(!profile.player_id){message('submit-message','Your account is not linked to a player profile. Ask the club admin to link it.','error');return}
@@ -220,6 +220,7 @@ $('submission-form').addEventListener('submit',async e=>{
 });
 let authGeneration=0;
 async function handleAuthState(event,session){
+ if(event==='PASSWORD_RECOVERY')passwordRecoveryFlow=true;
  if(!session?.user){
   authGeneration++;
   user=null;profile=null;players=[];stopPlayerStatusGuard();
