@@ -16,7 +16,7 @@
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Your game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
 <section id="invite" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Share this QR code with prospective members. They'll scan it, enter the club access code, verify their email, and join automatically.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div></section>
-<section id="admin" class="hidden"><div class="panel"><h2>Club registration access</h2><p class="muted">Players can join without waiting for admin approval. Generate an access code and share it with people you want to invite. The code is shown only once; save it somewhere safe. Generating another code immediately invalidates the previous one.</p><div class="actions"><button id="generate-registration-code" type="button">Generate new access code</button></div><div id="registration-code-message" class="muted" role="status"></div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's current rating manually. Future game results will build from the adjusted rating.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>New rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="admin" class="hidden"><div class="panel"><h2>Club registration access</h2><p class="muted">Players can join without waiting for admin approval. Generate a 4-digit PIN and share it with people you want to invite. The PIN is shown only once; save it somewhere safe. Generating another PIN immediately invalidates the previous one.</p><div class="actions"><button id="generate-registration-code" type="button">Generate 4-digit club PIN</button></div><div id="registration-code-message" class="muted" role="status"></div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's current rating manually. Future game results will build from the adjusted rating.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>New rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -176,35 +176,36 @@ async function loadAdmin(){
  $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
 }
 function makeClubAccessCode(){
- const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
- const bytes=new Uint8Array(20);crypto.getRandomValues(bytes);
- const raw=Array.from(bytes,b=>alphabet[b&31]).join('');
- return 'NDCC-'+raw.match(/.{1,5}/g).join('-');
-}
-async function hashClubAccessCode(code){
- const bytes=new TextEncoder().encode(code.replace(/[^A-Z0-9]/g,''));
- const digest=await crypto.subtle.digest('SHA-256',bytes);
- return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+ const value=new Uint32Array(1);crypto.getRandomValues(value);
+ return String(value[0]%10000).padStart(4,'0');
 }
 $('generate-registration-code').addEventListener('click',async()=>{
  if(profile?.role!=='admin')return;
- if(!confirm('Generate a new club access code? Any previously issued code will stop working immediately.'))return;
+ if(!confirm('Generate a new 4-digit club PIN? Any previously issued PIN will stop working immediately.'))return;
  const button=$('generate-registration-code');button.disabled=true;button.textContent='Generating…';
  $('registration-code-message').textContent='';
  try{
-  const code=makeClubAccessCode(),codeHash=await hashClubAccessCode(code);
-  const {error}=await supabase.rpc('admin_set_club_registration_code',{p_code_hash:codeHash});
-  if(error)throw error;
-  $('registration-code-message').innerHTML='<div class="notice success"><strong>New club access code — save this now</strong><div style="font-size:1.25rem;font-weight:800;letter-spacing:.08em;margin:8px 0" id="registration-code-value"></div><button type="button" class="secondary" id="copy-registration-code">Copy code</button><div class="muted">This code will not be shown again. Share it only with prospective club members.</div></div>';
+  const code=makeClubAccessCode();
+  const {data:{session},error:sessionError}=await supabase.auth.getSession();
+  if(sessionError)throw sessionError;
+  if(!session?.access_token)throw new Error('Please sign in again and retry.');
+  const response=await fetch(SUPABASE_URL+'/functions/v1/submit-registration',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+   body:JSON.stringify({action:'rotate-registration-code',access_code:code})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||'The PIN could not be updated.');
+  $('registration-code-message').innerHTML='<div class="notice success"><strong>New 4-digit club PIN — save this now</strong><div style="font-size:1.7rem;font-weight:800;letter-spacing:.22em;margin:10px 0" id="registration-code-value"></div><button type="button" class="secondary" id="copy-registration-code">Copy PIN</button><div class="muted">This PIN will not be shown again. Share it only with prospective club members.</div></div>';
   $('registration-code-value').textContent=code;
   $('copy-registration-code').addEventListener('click',async()=>{
    try{await navigator.clipboard.writeText(code);$('copy-registration-code').textContent='Copied';}
-   catch{$('copy-registration-code').textContent='Copy unavailable — select the code above';}
+   catch{$('copy-registration-code').textContent='Copy unavailable — select the PIN above';}
   });
  }catch(error){
-  $('registration-code-message').textContent='Could not update the club access code: '+error.message;
+  $('registration-code-message').textContent='Could not update the club PIN: '+error.message;
  }
- button.disabled=false;button.textContent='Generate new access code';
+ button.disabled=false;button.textContent='Generate 4-digit club PIN';
 });
 $('rating-player').addEventListener('change',()=>{
  const selected=players.find(p=>p.id===$('rating-player').value);
