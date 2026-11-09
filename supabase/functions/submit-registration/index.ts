@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     return response({ error: "Please enter a valid name and email address." }, 400);
   }
   if (!allowedSkillLevels.includes(skillLevel)) return response({ error: "Please choose a valid starting skill level." }, 400);
-  if (accessCode.length !== 20) return response({ error: "Enter the club access code provided by a member." }, 400);
+  if (accessCode.length !== 24) return response({ error: "Enter the club access code provided by a member." }, 400);
 
   const clientIp = req.headers.get("cf-connecting-ip")?.trim();
   if (!clientIp) return response({ error: "Registration is temporarily unavailable. Please try again later." }, 503);
