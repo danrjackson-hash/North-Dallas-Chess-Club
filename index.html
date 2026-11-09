@@ -16,7 +16,7 @@
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Your game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
 <section id="invite" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Share this QR code with prospective members. They'll scan it, enter the 4-digit club PIN, verify their email, and join automatically.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div></section>
-<section id="admin" class="hidden"><div class="panel"><h2>Club registration access</h2><p class="muted">Players can join without waiting for admin approval. Generate a 4-digit PIN and share it with people you want to invite. The PIN is shown only once; save it somewhere safe. Generating another PIN immediately invalidates the previous one.</p><div class="actions"><button id="generate-registration-code" type="button">Generate 4-digit club PIN</button></div><div id="registration-code-message" class="muted" role="status"></div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's current rating manually. Future game results will build from the adjusted rating.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>New rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="admin" class="hidden"><div class="panel"><h2>Club registration access</h2><p class="muted">Players can join without waiting for admin approval. Your current 4-digit PIN stays visible here whenever you open the Admin tab. Share it only with people you want to invite. Generating another PIN immediately invalidates the previous one.</p><div class="actions"><button id="generate-registration-code" type="button">Generate new 4-digit PIN</button></div><div id="current-registration-pin" class="notice" role="status">Loading current club PIN…</div><div id="registration-code-message" class="muted" role="status"></div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's current rating manually. Future game results will build from the adjusted rating.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>New rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -128,7 +128,35 @@ async function loadHistory(){
  if(error){$('game-history').textContent=error.message;return}
  $('game-history').innerHTML=data?.length?data.map(g=>'<div class="item"><strong>'+gameLabel(g)+'</strong><div class="muted">'+new Date(g.played_at).toLocaleString()+'</div></div>').join(''):'No approved games yet.';
 }
+async function loadRegistrationPin(){
+ const target=$('current-registration-pin');
+ target.textContent='Loading current club PIN…';
+ try{
+  const {data:{session},error:sessionError}=await supabase.auth.getSession();
+  if(sessionError)throw sessionError;
+  if(!session?.access_token)throw new Error('Please sign in again.');
+  const response=await fetch(SUPABASE_URL+'/functions/v1/submit-registration',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':'Bearer '+session.access_token},
+   body:JSON.stringify({action:'get-registration-code'})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(response.status===404){target.textContent='No club PIN has been generated yet. Use the button below to create one.';return;}
+  if(!response.ok)throw new Error(result.error||'The PIN could not be loaded.');
+  renderRegistrationPin(result.access_code);
+ }catch(error){target.textContent='Could not load the current PIN: '+error.message;}
+}
+function renderRegistrationPin(code){
+ const target=$('current-registration-pin');
+ target.innerHTML='<strong>Current club PIN</strong><div style="font-size:1.9rem;font-weight:850;letter-spacing:.24em;margin:8px 0" id="current-registration-pin-value"></div><button type="button" class="secondary" id="copy-current-registration-pin">Copy PIN</button><div class="muted">This is the active PIN. It remains available here until you generate a replacement.</div>';
+ $('current-registration-pin-value').textContent=code;
+ $('copy-current-registration-pin').addEventListener('click',async()=>{
+  try{await navigator.clipboard.writeText(code);$('copy-current-registration-pin').textContent='Copied';}
+  catch{$('copy-current-registration-pin').textContent='Copy unavailable — select the PIN above';}
+ });
+}
 async function loadAdmin(){
+ await loadRegistrationPin();
  const [rosterRes,profilesRes,pendRes,rejectionRes]=await Promise.all([
   supabase.from('players').select('*').order('display_name'),
   supabase.from('profiles').select('id,display_name,email,player_id,role').order('display_name'),
@@ -196,12 +224,8 @@ $('generate-registration-code').addEventListener('click',async()=>{
   });
   const result=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(result.error||'The PIN could not be updated.');
-  $('registration-code-message').innerHTML='<div class="notice success"><strong>New 4-digit club PIN — save this now</strong><div style="font-size:1.7rem;font-weight:800;letter-spacing:.22em;margin:10px 0" id="registration-code-value"></div><button type="button" class="secondary" id="copy-registration-code">Copy PIN</button><div class="muted">This PIN will not be shown again. Share it only with prospective club members.</div></div>';
-  $('registration-code-value').textContent=code;
-  $('copy-registration-code').addEventListener('click',async()=>{
-   try{await navigator.clipboard.writeText(code);$('copy-registration-code').textContent='Copied';}
-   catch{$('copy-registration-code').textContent='Copy unavailable — select the PIN above';}
-  });
+  renderRegistrationPin(code);
+  message('registration-code-message','Your new club PIN is active.','success');
  }catch(error){
   $('registration-code-message').textContent='Could not update the club PIN: '+error.message;
  }
