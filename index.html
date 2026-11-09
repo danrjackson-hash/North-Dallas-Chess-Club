@@ -103,12 +103,13 @@ async function loadBoard(){
 }
 function resultText(r){return r==='white_win'?'White wins':r==='black_win'?'Black wins':'Draw'}
 function gameLabel(s){const w=players.find(p=>p.id===s.white_player_id)?.display_name||'Player';const b=players.find(p=>p.id===s.black_player_id)?.display_name||'Player';return esc(w)+' vs '+esc(b)+' · '+resultText(s.result)}
+function autoApprovalTime(s){return new Date(new Date(s.created_at).getTime()+3*60*60*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}
 async function loadReviews(){
  const {data:pending,error}=await supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false});
  if(error){$('pending-list').textContent=error.message;return}
  const reviewable=(pending||[]).filter(s=>s.submitted_by!==user.id&&(profile.role==='admin'||profile.player_id===s.white_player_id||profile.player_id===s.black_player_id));
- $('pending-list').innerHTML=reviewable.length?reviewable.map(s=>'<div class="item"><div><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+' · submitted by '+(s.submitted_by===user.id?'you':'another player')+'</div>'+(s.comments?'<div class="muted">'+esc(s.comments)+'</div>':'')+'</div><div class="actions"><button data-review="'+s.id+'" data-approve="true">Approve</button><button class="danger" data-review="'+s.id+'" data-approve="false">Reject</button></div></div>').join(''):'No results are waiting for your approval.';
- $('my-submissions').innerHTML=(pending||[]).filter(s=>s.submitted_by===user.id).map(s=>'<div class="item">'+gameLabel(s)+' <span class="status">'+esc(s.status)+'</span><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join('')||'You have no pending submissions.';
+ $('pending-list').innerHTML=reviewable.length?reviewable.map(s=>'<div class="item"><div><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+' · submitted by another player</div>'+(s.status==='pending'?'<div class="muted">Automatically approves at '+autoApprovalTime(s)+' unless rejected.</div>':'<div class="muted">This result requires club admin review.</div>')+(s.comments?'<div class="muted">'+esc(s.comments)+'</div>':'')+'</div><div class="actions"><button data-review="'+s.id+'" data-approve="true">Approve</button><button class="danger" data-review="'+s.id+'" data-approve="false">Reject</button></div></div>').join(''):'No results are waiting for your approval.';
+ $('my-submissions').innerHTML=(pending||[]).filter(s=>s.submitted_by===user.id).map(s=>'<div class="item">'+gameLabel(s)+' <span class="status">'+esc(s.status)+'</span><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div>'+(s.status==='pending'?'<div class="muted">If not rejected, automatically approves at '+autoApprovalTime(s)+'.</div>':'')+'</div>').join('')||'You have no pending submissions.';
  document.querySelectorAll('[data-review]').forEach(b=>b.addEventListener('click',()=>review(b.dataset.review,b.dataset.approve==='true')));
 }
 async function review(id,approve){
