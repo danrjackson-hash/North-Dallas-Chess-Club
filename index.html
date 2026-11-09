@@ -15,8 +15,8 @@
 <section id="submit" class="hidden"><div class="panel"><h2>Submit a game result</h2><p class="muted">The other player must approve the result before ratings change.</p><form id="submission-form"><div class="grid"><div><label>Opponent</label><select id="opponent" required></select></div><div><label>Which color did you play?</label><select id="color"><option value="white">White</option><option value="black">Black</option></select></div><div><label>Result</label><select id="my-result"><option value="win">I won</option><option value="draw">Draw</option><option value="loss">I lost</option></select></div><div><label>Date and time</label><input id="played-at" type="datetime-local" required></div></div><label>Optional note</label><textarea id="comments" maxlength="1000" placeholder="Anything the other player or admin should know"></textarea><div class="actions"><button id="submit-result">Submit for approval</button></div></form><div id="submit-message" class="muted"></div></div></section>
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Your game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
-<section id="invite" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Share this code with friends. They can scan it to request membership; the club admin approves each request before anyone joins the roster.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div></section>
-<section id="admin" class="hidden"><div class="panel"><h2>New player requests</h2><div id="registration-requests" class="muted">Loading…</div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's current rating manually. Future game results will build from the adjusted rating.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>New rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="invite" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Share this QR code with prospective members. They'll scan it, enter the club access code, verify their email, and join automatically.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div></section>
+<section id="admin" class="hidden"><div class="panel"><h2>Club registration access</h2><p class="muted">Players can join without waiting for admin approval. Generate an access code and share it with people you want to invite. The code is shown only once; save it somewhere safe. Generating another code immediately invalidates the previous one.</p><div class="actions"><button id="generate-registration-code" type="button">Generate new access code</button></div><div id="registration-code-message" class="muted" role="status"></div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's current rating manually. Future game results will build from the adjusted rating.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>New rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -91,7 +91,7 @@ async function loadRegistrationQr(){
  $('print-qr').onclick=()=>{
   const dataUrl=$('registration-qr').toDataURL('image/png'),w=window.open('','_blank');
   if(!w){alert('Please allow pop-ups to print the QR code.');return;}
-  w.document.write('<!doctype html><html><head><title>North Dallas Chess Club Registration</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:35px}img{width:320px;height:320px}p{overflow-wrap:anywhere;font-size:12px}</style></head><body><h1>Join North Dallas Chess Club</h1><p>Scan to request membership</p><img src="'+dataUrl+'"><p>'+registrationUrl+'</p></body></html>');
+  w.document.write('<!doctype html><html><head><title>North Dallas Chess Club Registration</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:35px}img{width:320px;height:320px}p{overflow-wrap:anywhere;font-size:14px}</style></head><body><h1>Join North Dallas Chess Club</h1><p>Scan to register, then enter the club access code provided by a member.</p><img src="'+dataUrl+'"><p>'+registrationUrl+'</p></body></html>');
   w.document.close();w.onload=()=>w.print();
  };
 }
@@ -129,11 +129,10 @@ async function loadHistory(){
  $('game-history').innerHTML=data?.length?data.map(g=>'<div class="item"><strong>'+gameLabel(g)+'</strong><div class="muted">'+new Date(g.played_at).toLocaleString()+'</div></div>').join(''):'No approved games yet.';
 }
 async function loadAdmin(){
- const [rosterRes,profilesRes,pendRes,requestsRes,rejectionRes]=await Promise.all([
+ const [rosterRes,profilesRes,pendRes,rejectionRes]=await Promise.all([
   supabase.from('players').select('*').order('display_name'),
   supabase.from('profiles').select('id,display_name,email,player_id,role').order('display_name'),
   supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false}),
-  supabase.from('registration_requests').select('*').eq('status','pending').order('submitted_at',{ascending:true}),
   supabase.rpc('admin_player_rejection_stats')
  ]);
  const data=rosterRes.data||[],accounts=profilesRes.data||[],rejectionStats=rejectionRes.data||[];
@@ -175,23 +174,37 @@ async function loadAdmin(){
  }));
  document.querySelectorAll('[data-deactivate]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Deactivate this player? Their historical games and ratings remain.'))return;const {error}=await supabase.from('players').update({is_active:false}).eq('id',b.dataset.deactivate);if(error)alert(error.message);else{await load();}}));
  $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
- $('registration-requests').innerHTML=requestsRes.error?esc(requestsRes.error.message):(requestsRes.data||[]).length?requestsRes.data.map(r=>{const rating=({Beginner:1000,Intermediate:1400,Advanced:1800,Expert:2200})[r.skill_level]||1400;return '<div class="item"><strong>'+esc(r.full_name)+'</strong><div class="muted">'+esc(r.email)+' · '+esc(r.skill_level)+' · starting rating '+rating+' · '+new Date(r.submitted_at).toLocaleString()+'</div><div class="actions"><button data-reg-review="'+r.id+'" data-approve="true">Approve & add player</button><button class="danger" data-reg-review="'+r.id+'" data-approve="false">Reject</button></div></div>';}).join(''):'No new registration requests.';
- document.querySelectorAll('[data-reg-review]').forEach(b=>b.addEventListener('click',async()=>{
-  const approve=b.dataset.approve==='true';
-  const req=(requestsRes.data||[]).find(x=>x.id===b.dataset.regReview);
-  const startingRating=({Beginner:1000,Intermediate:1400,Advanced:1800,Expert:2200})[req.skill_level]||1400;
-  if(!confirm(approve?'Approve '+req.full_name+' ('+req.skill_level+') and add them to the roster at '+startingRating+'?':'Reject '+req.full_name+'’s registration request?'))return;
-  b.disabled=true;
-  const {error}=await supabase.rpc('review_registration_request',{p_request_id:b.dataset.regReview,p_approve:approve});
-  if(error){alert(error.message);b.disabled=false;return;}
-  if(approve){
-   const {data:inviteData,error:inviteError}=await supabase.functions.invoke('invite-player',{body:{request_id:b.dataset.regReview}});
-   if(inviteError)alert('Player added to the roster, but the invitation could not be sent. Invitation error: '+inviteError.message);
-   else alert('Player added to the roster and invitation email sent to '+inviteData.email+'.');
-  }
-  await load();
- }));
+function makeClubAccessCode(){
+ const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+ const bytes=new Uint8Array(20);crypto.getRandomValues(bytes);
+ const raw=Array.from(bytes,b=>alphabet[b&31]).join('');
+ return 'NDCC-'+raw.match(/.{1,5}/g).join('-');
 }
+async function hashClubAccessCode(code){
+ const bytes=new TextEncoder().encode(code.replace(/[^A-Z0-9]/g,''));
+ const digest=await crypto.subtle.digest('SHA-256',bytes);
+ return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+$('generate-registration-code').addEventListener('click',async()=>{
+ if(profile?.role!=='admin')return;
+ if(!confirm('Generate a new club access code? Any previously issued code will stop working immediately.'))return;
+ const button=$('generate-registration-code');button.disabled=true;button.textContent='Generating…';
+ $('registration-code-message').textContent='';
+ try{
+  const code=makeClubAccessCode(),codeHash=await hashClubAccessCode(code);
+  const {error}=await supabase.rpc('admin_set_club_registration_code',{p_code_hash:codeHash});
+  if(error)throw error;
+  $('registration-code-message').innerHTML='<div class="notice success"><strong>New club access code — save this now</strong><div style="font-size:1.25rem;font-weight:800;letter-spacing:.08em;margin:8px 0" id="registration-code-value"></div><button type="button" class="secondary" id="copy-registration-code">Copy code</button><div class="muted">This code will not be shown again. Share it only with prospective club members.</div></div>';
+  $('registration-code-value').textContent=code;
+  $('copy-registration-code').addEventListener('click',async()=>{
+   try{await navigator.clipboard.writeText(code);$('copy-registration-code').textContent='Copied';}
+   catch{$('copy-registration-code').textContent='Copy unavailable — select the code above';}
+  });
+ }catch(error){
+  $('registration-code-message').textContent='Could not update the club access code: '+error.message;
+ }
+ button.disabled=false;button.textContent='Generate new access code';
+});
 $('rating-player').addEventListener('change',()=>{
  const selected=players.find(p=>p.id===$('rating-player').value);
  if(selected)$('rating-value').value=selected.current_rating;
@@ -241,6 +254,8 @@ async function handleAuthState(event,session){
  const generation=++authGeneration;
  user=session.user;
  try{
+  const {error:registrationError}=await supabase.rpc('complete_self_registration');
+  if(registrationError)throw registrationError;
   await load();
  }catch(e){
   if(generation!==authGeneration)return;
