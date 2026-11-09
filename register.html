@@ -3,24 +3,26 @@
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;color:#172033;background:#f3f5f9}*{box-sizing:border-box}body{margin:0}header{background:#172554;color:white;padding:22px max(18px,calc((100% - 620px)/2))}header h1{font-size:1.3rem;margin:0}header p{margin:5px 0 0;color:#dbeafe}main{max-width:620px;margin:20px auto;padding:0 14px}.panel{background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 1px 2px #0f172a08}h2{font-size:1.1rem;margin:0 0 8px}p{line-height:1.5}.muted{color:#64748b;font-size:.9rem}label{display:block;font-weight:650;font-size:.88rem;margin:14px 0 5px}input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}button{margin-top:16px;border:0;border-radius:9px;padding:11px 16px;background:#1d4ed8;color:white;font:inherit;font-weight:650;cursor:pointer}button:disabled{opacity:.6}.notice{margin-top:14px;padding:12px;border-radius:8px;background:#eff6ff;color:#1e40af}.success{background:#f0fdf4;color:#166534}.error{background:#fef2f2;color:#991b1b}.trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
 </style></head><body><header><h1>♟ North Dallas Chess Club</h1><p>Wednesday Night Blitz · New Player Registration</p></header>
-<main><section class="panel"><h2>Join the club</h2><p class="muted">Welcome! Enter your name and email address below. The club organizer will review your request. Once approved, you'll receive an invitation to create your account and join the ratings leaderboard.</p>
-<form id="registration"><label for="full-name">Your name</label><input id="full-name" maxlength="80" autocomplete="name" required placeholder="First and last name"><label for="email">Email address</label><input id="email" type="email" maxlength="254" autocomplete="email" required placeholder="you@example.com"><label for="skill-level">Starting skill level</label><select id="skill-level" required><option value="">Choose your level</option><option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Advanced">Advanced</option><option value="Expert">Expert</option></select>
+<main><section class="panel"><h2>Join the club</h2><p class="muted">Welcome! Enter your name, email address, starting skill level, and the club access code. We'll email you a secure verification link. Once you verify your email, you'll automatically join the club.</p>
+<form id="registration"><label for="full-name">Your name</label><input id="full-name" maxlength="80" autocomplete="name" required placeholder="First and last name"><label for="email">Email address</label><input id="email" type="email" maxlength="254" autocomplete="email" required placeholder="you@example.com"><label for="skill-level">Starting skill level</label><select id="skill-level" required><option value="">Choose your level</option><option value="Beginner">Beginner</option><option value="Intermediate">Intermediate</option><option value="Advanced">Advanced</option><option value="Expert">Expert</option></select><label for="access-code">Club access code</label><input id="access-code" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="NDCC-XXXXX-XXXXX-XXXXX-XXXXX">
 <div class="trap" aria-hidden="true"><label for="website">Leave this field blank</label><input id="website" tabindex="-1" autocomplete="off"></div>
-<button id="submit" type="submit">Request club registration</button></form><div id="message" role="status" aria-live="polite"></div></section></main>
+<button id="submit" type="submit">Join the club</button></form><div id="message" role="status" aria-live="polite"></div></section></main>
 <script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const form=document.getElementById('registration'),button=document.getElementById('submit'),message=document.getElementById('message');
 form.addEventListener('submit',async e=>{
  e.preventDefault();
  if(document.getElementById('website').value)return;
- const full_name=document.getElementById('full-name').value.trim(),email=document.getElementById('email').value.trim(),skill_level=document.getElementById('skill-level').value;
- if(!full_name||!email||!skill_level)return;
+ const full_name=document.getElementById('full-name').value.trim(),email=document.getElementById('email').value.trim(),skill_level=document.getElementById('skill-level').value,access_code=document.getElementById('access-code').value.trim();
+ if(!full_name||!email||!skill_level||!access_code)return;
  button.disabled=true;button.textContent='Submitting…';message.className='';message.textContent='';
  try{
   const res=await fetch(SUPABASE_URL+'/functions/v1/submit-registration',{
    method:'POST',
    headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY},
-   body:JSON.stringify({full_name,email,skill_level,website:document.getElementById('website').value})
+   body:JSON.stringify({full_name,email,skill_level,access_code,website:document.getElementById('website').value})
   });
   const result=await res.json().catch(()=>({}));
   if(!res.ok){
@@ -28,11 +30,13 @@ form.addEventListener('submit',async e=>{
    message.textContent=result.error||'We could not submit your request. Please try again.';
    return;
   }
-  form.reset();message.className='notice success';message.textContent='Thanks! Your request has been sent to the club organizer. You will receive an email invitation if your registration is approved.';
+  const {error:emailError}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:true,data:{display_name:full_name},emailRedirectTo:new URL('./',window.location.href).href}});
+  if(emailError){message.className='notice error';message.textContent='Your details were accepted, but we could not send the verification email. Please submit again to retry. '+emailError.message;return;}
+  form.reset();message.className='notice success';message.textContent='Check your email for a secure verification link. Once you open it and verify your address, your club account and starting rating will be activated automatically.';
  }catch{
   message.className='notice error';message.textContent='We could not reach the registration service. Please try again in a moment.';
  }finally{
-  button.disabled=false;button.textContent='Request club registration';
+  button.disabled=false;button.textContent='Join the club';
  }
 });
 </script></body></html>
