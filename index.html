@@ -10,13 +10,13 @@
 <section id="auth" class="panel"><h2>Sign in</h2><p class="muted">Sign in with your email and password, or use a one-time sign-in link.</p><form id="login"><label>Email address</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Your password"><div class="actions"><button type="button" id="password-login">Sign in</button><button type="button" class="secondary" id="send-link">Email me a sign-in link</button><button type="button" class="secondary" id="forgot-password">Forgot password?</button></div></form><div id="auth-message" class="muted" role="status"></div></section>
 <div id="app" class="hidden">
 <div class="panel no-print"><div class="item-top"><div><strong id="welcome">Welcome</strong><div class="muted" id="role-label"></div></div><div class="actions account-actions" style="margin:0"><button class="secondary" id="refresh-app" type="button">Refresh app</button><button class="secondary" id="logout" type="button">Sign out</button></div></div></div><div class="panel no-print install-panel hidden" id="install-panel"><div class="item-top"><div><strong>Put the club app on your phone</strong><div class="muted">Add a home-screen icon for quick access to club ratings.</div></div><button id="install-app" type="button">Add to Home Screen</button></div><div id="install-help" class="muted" role="status"></div></div><details class="panel no-print" id="password-panel"><summary id="password-panel-title" style="cursor:pointer;font-weight:700">Set or change your password</summary><p class="muted" id="password-panel-copy"></p><form id="password-update"><label>New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"><label>Confirm new password</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="8" required placeholder="Enter it again"><div class="actions"><button id="save-password">Save password</button></div></form><div id="password-message" class="muted"></div></details>
-<div id="approval-alert" class="approval-alert" role="alert" aria-live="assertive"><span id="approval-alert-text">You have a game result waiting for your approval.</span><button type="button" id="approval-alert-button">Review now</button></div><nav class="tabs no-print"><button class="tab active" data-tab="leaderboard">Leaderboard</button><button class="tab" data-tab="submit">Submit result</button><button class="tab" data-tab="reviews">Approvals <span id="approval-count" class="pending-count hidden">0</span></button><button class="tab" data-tab="history">Game history</button><button class="tab" data-tab="invite">Invite a friend</button><button class="tab admin-only hidden" data-tab="admin">Admin</button></nav>
+<div id="approval-alert" class="approval-alert" role="alert" aria-live="assertive"><span id="approval-alert-text">You have a game result waiting for your approval.</span><button type="button" id="approval-alert-button">Review now</button></div><nav class="tabs no-print"><button class="tab active" data-tab="leaderboard">Leaderboard</button><button class="tab" data-tab="submit">Submit result</button><button class="tab" data-tab="reviews">My approvals <span id="approval-count" class="pending-count hidden">0</span></button><button class="tab" data-tab="history">Game history</button><button class="tab" data-tab="invite">Invite a friend</button><button class="tab admin-only hidden" data-tab="admin">Admin</button></nav>
 <section id="leaderboard"><div class="panel"><div class="item-top"><h2>Club standings</h2><button class="secondary no-print" onclick="window.print()">Print</button></div><div id="standings" class="muted">Loading ratings…</div></div></section>
 <section id="submit" class="hidden"><div class="panel"><h2>Submit a game result</h2><p class="muted">The other player must approve the result before ratings change.</p><form id="submission-form"><div class="grid"><div><label>Opponent</label><select id="opponent" required></select></div><div><label>Which color did you play?</label><select id="color"><option value="white">White</option><option value="black">Black</option></select></div><div><label>Result</label><select id="my-result"><option value="win">I won</option><option value="draw">Draw</option><option value="loss">I lost</option></select></div><div><label>Date and time</label><input id="played-at" type="datetime-local" required></div></div><label>Optional note</label><textarea id="comments" maxlength="1000" placeholder="Anything the other player or admin should know"></textarea><div class="actions"><button id="submit-result">Submit for approval</button></div></form><div id="submit-message" class="muted"></div></div></section>
 <section id="reviews" class="hidden"><div class="panel"><h2>Results awaiting your approval</h2><div id="pending-list" class="muted">Loading…</div></div><div class="panel"><h2>Your submissions</h2><div id="my-submissions" class="muted">Loading…</div></div></section>
 <section id="history" class="hidden"><div class="panel"><h2>Your game history</h2><div id="game-history" class="muted">Loading…</div></div></section>
 <section id="invite" class="hidden"><div class="panel" id="qr-panel"><h2>New player registration QR code</h2><p>Share this QR code with prospective members. They'll scan it, enter the 4-digit club PIN, verify their email, and join automatically.</p><div style="display:flex;justify-content:center;padding:12px"><canvas id="registration-qr" width="240" height="240" aria-label="QR code for club registration"></canvas></div><p class="muted" id="registration-url" style="text-align:center;overflow-wrap:anywhere"></p><div class="actions"><button id="print-qr" type="button">Print QR code</button><button id="open-registration" type="button" class="secondary">Open registration page</button></div></div></section>
-<section id="admin" class="hidden"><div class="panel"><h2>Club registration access</h2><p class="muted">Players can join without waiting for admin approval. Your current 4-digit PIN does not expire and remains valid even when the administrator is signed out or inactive. Share it only with people you want to invite. Generating another PIN immediately invalidates the previous one.</p><div class="actions"><button id="generate-registration-code" type="button">Generate new 4-digit PIN</button></div><div id="current-registration-pin" class="notice" role="status">Loading current club PIN…</div><div id="registration-code-message" class="muted" role="status"></div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's current rating manually. Future game results will build from the adjusted rating.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>New rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Pending results (admin view)</h2><div id="admin-pending" class="muted">Loading…</div></div></section>
+<section id="admin" class="hidden"><div class="panel"><h2>Club registration access</h2><p class="muted">Players can join without waiting for admin approval. Your current 4-digit PIN does not expire and remains valid even when the administrator is signed out or inactive. Share it only with people you want to invite. Generating another PIN immediately invalidates the previous one.</p><div class="actions"><button id="generate-registration-code" type="button">Generate new 4-digit PIN</button></div><div id="current-registration-pin" class="notice" role="status">Loading current club PIN…</div><div id="registration-code-message" class="muted" role="status"></div></div><div class="panel"><h2>Adjust a player's rating</h2><p class="muted">Set a player's baseline rating before game results. Existing official games will be recalculated from this baseline.</p><form id="rating-adjust-form"><div class="grid"><div><label>Player</label><select id="rating-player" required></select></div><div><label>Baseline rating</label><input id="rating-value" type="number" min="100" max="4000" step="1" required></div></div><div class="actions"><button id="save-rating" type="submit">Save rating</button></div></form><div id="rating-adjust-message" class="muted" role="status"></div></div><div class="panel"><h2>Club roster and account links</h2><div id="roster" class="muted">Loading…</div></div><div class="panel"><h2>Game management</h2><p class="muted">Search the official game ledger by player name, result, date, or cancellation reason. Canceling a game preserves its record and recalculates ratings.</p><label for="admin-game-search">Find a game</label><input id="admin-game-search" type="search" placeholder="Search players, result, date…"><div id="admin-games" class="muted">Loading games…</div></div></section>
 </div>
 </main>
 <script type="module">
@@ -24,7 +24,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import QRCode from 'https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-const $=id=>document.getElementById(id);let user=null,profile=null,players=[],playerStatusChannel=null,playerStatusTimer=null,playerStatusPlayerId=null,checkingPlayerStatus=false,signoutNotice='',passwordRecoveryFlow=false;
+const $=id=>document.getElementById(id);let user=null,profile=null,players=[],adminGames=[],playerStatusChannel=null,playerStatusTimer=null,playerStatusPlayerId=null,checkingPlayerStatus=false,signoutNotice='',passwordRecoveryFlow=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function message(id,text,kind=''){ $(id).innerHTML=text?'<div class="notice '+kind+'">'+esc(text)+'</div>':''; }
 function tab(id){['leaderboard','submit','reviews','history','invite','admin'].forEach(x=>$(x).classList.toggle('hidden',x!==id));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));}
@@ -107,7 +107,7 @@ function autoApprovalTime(s){return new Date(new Date(s.created_at).getTime()+3*
 async function loadReviews(){
  const {data:pending,error}=await supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false});
  if(error){$('pending-list').textContent=error.message;return}
- const reviewable=(pending||[]).filter(s=>s.submitted_by!==user.id&&(profile.role==='admin'||profile.player_id===s.white_player_id||profile.player_id===s.black_player_id));
+ const reviewable=(pending||[]).filter(s=>s.submitted_by!==user.id&&profile.player_id!==null&&(profile.player_id===s.white_player_id||profile.player_id===s.black_player_id));
  const count=reviewable.length, countBadge=$('approval-count'), alertBox=$('approval-alert');
  countBadge.textContent=String(count);countBadge.classList.toggle('hidden',count===0);
  alertBox.classList.toggle('visible',count>0);
@@ -157,18 +157,18 @@ function renderRegistrationPin(code){
 }
 async function loadAdmin(){
  await loadRegistrationPin();
- const [rosterRes,profilesRes,pendRes,rejectionRes]=await Promise.all([
+ const [rosterRes,profilesRes,rejectionRes]=await Promise.all([
   supabase.from('players').select('*').order('display_name'),
   supabase.from('profiles').select('id,display_name,email,player_id,role').order('display_name'),
-  supabase.from('game_submissions').select('*').in('status',['pending','needs_review']).order('created_at',{ascending:false}),
   supabase.rpc('admin_player_rejection_stats')
  ]);
  const data=rosterRes.data||[],accounts=profilesRes.data||[],rejectionStats=rejectionRes.data||[];
+ players=data;
  const activePlayers=data.filter(p=>p.is_active).sort((a,b)=>a.display_name.localeCompare(b.display_name));
- $('rating-player').innerHTML=activePlayers.map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+' · '+p.current_rating+'</option>').join('');
+ $('rating-player').innerHTML=activePlayers.map(p=>'<option value="'+p.id+'">'+esc(p.display_name)+' · current '+p.current_rating+'</option>').join('');
  $('rating-player').disabled=!activePlayers.length;
  $('save-rating').disabled=!activePlayers.length;
- if(activePlayers.length){$('rating-player').value=activePlayers[0].id;$('rating-value').value=activePlayers[0].current_rating;}
+ if(activePlayers.length){$('rating-player').value=activePlayers[0].id;$('rating-value').value=activePlayers[0].starting_rating+(activePlayers[0].rating_adjustment||0);}
  $('roster').innerHTML=rosterRes.error?esc(rosterRes.error.message):data.filter(p=>p.is_active).map(p=>{
   const linked=accounts.find(a=>a.player_id===p.id);
   const canDeactivate=p.is_active&&linked?.role!=='admin'&&p.id!==profile.player_id;
@@ -201,8 +201,48 @@ async function loadAdmin(){
   else alert('Password-reset email sent to '+linked.email+'. They can open the link and choose a new password.');
  }));
  document.querySelectorAll('[data-deactivate]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Deactivate this player? Their historical games and ratings remain.'))return;const {error}=await supabase.from('players').update({is_active:false}).eq('id',b.dataset.deactivate);if(error)alert(error.message);else{await load();}}));
- $('admin-pending').innerHTML=pendRes.error?esc(pendRes.error.message):(pendRes.data||[]).length?pendRes.data.map(s=>'<div class="item"><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div></div>').join(''):'No pending results.';
+ await loadAdminGames();
 }
+
+function renderAdminGames(){
+ const query=($('admin-game-search').value||'').trim().toLowerCase();
+ const filtered=adminGames.filter(g=>{
+  const white=players.find(p=>p.id===g.white_player_id)?.display_name||'Player';
+  const black=players.find(p=>p.id===g.black_player_id)?.display_name||'Player';
+  const haystack=[white,black,resultText(g.result),g.played_at,g.created_at,g.void_reason||'',g.voided_at?'canceled':'active'].join(' ').toLowerCase();
+  return !query||haystack.includes(query);
+ });
+ $('admin-games').innerHTML=filtered.length?filtered.map(g=>{
+  const state=g.voided_at?'<span class="status rejected">Canceled</span>':'<span class="status approved">Official</span>';
+  const reason=g.void_reason?'<div class="muted">Cancellation reason: '+esc(g.void_reason)+'</div>':'';
+  const action=g.voided_at?'':'<button class="danger" type="button" data-void-game="'+g.id+'">Cancel game</button>';
+  return '<div class="item"><div class="item-top"><div><strong>'+gameLabel(g)+'</strong> '+state+'<div class="muted">'+new Date(g.played_at).toLocaleString()+'</div>'+reason+'</div>'+action+'</div></div>';
+ }).join(''):'No games match that search.';
+ document.querySelectorAll('[data-void-game]').forEach(button=>button.addEventListener('click',()=>voidGame(button.dataset.voidGame)));
+}
+async function loadAdminGames(){
+ const target=$('admin-games');
+ const {data,error}=await supabase.from('games').select('id,white_player_id,black_player_id,result,played_at,created_at,voided_at,void_reason').order('played_at',{ascending:false}).limit(2000);
+ if(error){target.textContent='Could not load games: '+error.message;return;}
+ adminGames=data||[];
+ renderAdminGames();
+}
+async function voidGame(gameId){
+ if(profile?.role!=='admin')return;
+ const game=adminGames.find(g=>g.id===gameId);
+ if(!game||game.voided_at)return;
+ const reason=prompt('Why are you canceling this game? This reason will be kept in the audit history:');
+ if(reason===null)return;
+ if(!reason.trim()){alert('Please enter a cancellation reason.');return;}
+ if(!confirm('Cancel this game? Its rating impact will be removed and all ratings recalculated. The game record will be preserved.'))return;
+ const button=document.querySelector('[data-void-game="'+gameId+'"]');
+ if(button)button.disabled=true;
+ const {error}=await supabase.rpc('admin_void_game',{p_game_id:gameId,p_reason:reason.trim()});
+ if(error){alert('Could not cancel the game: '+error.message);if(button)button.disabled=false;return;}
+ await Promise.all([loadBoard(),loadHistory(),loadReviews(),loadAdmin()]);
+}
+$('admin-game-search').addEventListener('input',renderAdminGames);
+
 function makeClubAccessCode(){
  const value=new Uint32Array(1);crypto.getRandomValues(value);
  return String(value[0]%10000).padStart(4,'0');
@@ -233,7 +273,7 @@ $('generate-registration-code').addEventListener('click',async()=>{
 });
 $('rating-player').addEventListener('change',()=>{
  const selected=players.find(p=>p.id===$('rating-player').value);
- if(selected)$('rating-value').value=selected.current_rating;
+ if(selected)$('rating-value').value=selected.starting_rating+(selected.rating_adjustment||0);
 });
 $('rating-adjust-form').addEventListener('submit',async e=>{
  e.preventDefault();
@@ -249,7 +289,7 @@ $('rating-adjust-form').addEventListener('submit',async e=>{
  $('save-rating').disabled=false;
  if(error){message('rating-adjust-message',error.message,'error');return;}
  await load();
- message('rating-adjust-message',"Rating updated for "+player.display_name+": "+newRating+".",'success');
+ message('rating-adjust-message',"Baseline rating updated for "+player.display_name+": "+newRating+". Existing games were recalculated.",'success');
 });
 $('login').addEventListener('submit',e=>e.preventDefault());
 $('password-login').addEventListener('click',async()=>{const email=$('email').value.trim(),password=$('password').value;if(!email||!password){$('auth-message').textContent='Enter your email address and password.';return}$('password-login').disabled=true;$('auth-message').textContent='Signing in…';const {error}=await supabase.auth.signInWithPassword({email,password});$('password-login').disabled=false;$('auth-message').textContent=error?error.message:'';});
