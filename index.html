@@ -222,9 +222,19 @@ function renderAdminGames(){
 }
 async function loadAdminGames(){
  const target=$('admin-games');
- const {data,error}=await supabase.from('games').select('id,white_player_id,black_player_id,result,played_at,created_at,voided_at,void_reason').order('played_at',{ascending:false}).limit(2000);
- if(error){target.textContent='Could not load games: '+error.message;return;}
- adminGames=data||[];
+ target.textContent='Loading games…';
+ const pageSize=500;
+ let offset=0,allGames=[];
+ while(true){
+  const {data,error}=await supabase.from('games')
+   .select('id,white_player_id,black_player_id,result,played_at,created_at,voided_at,void_reason')
+   .order('played_at',{ascending:false}).range(offset,offset+pageSize-1);
+  if(error){target.textContent='Could not load games: '+error.message;return;}
+  allGames=allGames.concat(data||[]);
+  if(!data||data.length<pageSize)break;
+  offset+=pageSize;
+ }
+ adminGames=allGames;
  renderAdminGames();
 }
 async function voidGame(gameId){
