@@ -113,7 +113,7 @@ async function loadReviews(){
  alertBox.classList.toggle('visible',count>0);
  $('approval-alert-text').textContent=count===1?'ACTION REQUIRED: You have 1 game result waiting for your approval.':'ACTION REQUIRED: You have '+count+' game results waiting for your approval.';
  $('approval-alert-button').onclick=()=>tab('reviews');
- $('pending-list').innerHTML=reviewable.length?reviewable.map(s=>'<div class="item"><div><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+' · submitted by another player</div>'+(s.status==='pending'?'<div class="muted">Automatically approves at '+autoApprovalTime(s)+' unless rejected.</div>':'<div class="muted">This result requires club admin review.</div>')+(s.comments?'<div class="muted">'+esc(s.comments)+'</div>':'')+'</div><div class="actions"><button data-review="'+s.id+'" data-approve="true">Approve</button><button class="danger" data-review="'+s.id+'" data-approve="false">Reject</button></div></div>').join(''):'No results are waiting for your approval.';
+ $('pending-list').innerHTML=reviewable.length?reviewable.map(s=>'<div class="item"><div><strong>'+gameLabel(s)+'</strong><div class="muted">'+new Date(s.played_at).toLocaleString()+' · submitted by another player</div>'+(s.status==='pending'?'<div class="muted">Automatically approves at '+autoApprovalTime(s)+' unless rejected.</div>':'<div class="muted">Awaiting your review.</div>')+(s.comments?'<div class="muted">'+esc(s.comments)+'</div>':'')+'</div><div class="actions"><button data-review="'+s.id+'" data-approve="true">Approve</button><button class="danger" data-review="'+s.id+'" data-approve="false">Reject</button></div></div>').join(''):'No results are waiting for your approval.';
  $('my-submissions').innerHTML=(pending||[]).filter(s=>s.submitted_by===user.id).map(s=>'<div class="item">'+gameLabel(s)+' <span class="status">'+esc(s.status)+'</span><div class="muted">'+new Date(s.played_at).toLocaleString()+'</div>'+(s.status==='pending'?'<div class="muted">If not rejected, automatically approves at '+autoApprovalTime(s)+'.</div>':'')+'</div>').join('')||'You have no pending submissions.';
  document.querySelectorAll('[data-review]').forEach(b=>b.addEventListener('click',()=>review(b.dataset.review,b.dataset.approve==='true')));
 }
@@ -304,7 +304,7 @@ $('submission-form').addEventListener('submit',async e=>{
  const white=color==='white'?profile.player_id:opponent,black=color==='black'?profile.player_id:opponent;
  const result=mine==='draw'?'draw':(mine==='win'?(color==='white'?'white_win':'black_win'):(color==='white'?'black_win':'white_win'));
  const {error}=await supabase.from('game_submissions').insert({submitted_by:user.id,white_player_id:white,black_player_id:black,result,played_at:new Date($('played-at').value).toISOString(),comments:$('comments').value.trim()||null});
- if(error)message('submit-message',error.message,'error');else{message('submit-message','Result submitted. Ratings will update after your opponent or an admin approves it.','success');$('comments').value='';await loadReviews();tab('reviews')}
+ if(error)message('submit-message',error.message,'error');else{message('submit-message','Result submitted. Ratings will update when your opponent approves it or after the three-hour automatic approval window.','success');$('comments').value='';await loadReviews();tab('reviews')}
 });
 let authGeneration=0;
 async function handleAuthState(event,session){
