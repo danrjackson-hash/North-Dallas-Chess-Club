@@ -118,7 +118,7 @@ async function loadReviews(){
  document.querySelectorAll('[data-review]').forEach(b=>b.addEventListener('click',()=>review(b.dataset.review,b.dataset.approve==='true')));
 }
 async function review(id,approve){
- const note=approve?null:(prompt('Optional reason for rejecting this result:')||'Please check the result with the club admin.');
+ const note=approve?null:(prompt('Optional reason for rejecting this result:')||'Please check the result with your opponent.');
  const {error}=await supabase.rpc('review_game_submission',{p_submission_id:id,p_approve:approve,p_note:note});
  if(error){alert(error.message);return}await Promise.all([loadReviews(),loadBoard(),loadHistory(),profile.role==='admin'?loadAdmin():Promise.resolve()]);
 }
